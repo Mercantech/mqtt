@@ -1283,11 +1283,20 @@ body.present-mode main > section.present-slide {
   padding: 2.5rem 4vw 5.5rem;
   overflow-y: auto;
   overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   background:
     radial-gradient(ellipse 70% 45% at 15% 0%, rgba(0, 230, 184, 0.1), transparent 50%),
     radial-gradient(ellipse 50% 40% at 90% 20%, rgba(91, 140, 255, 0.08), transparent 45%),
     var(--bg-deep);
   scroll-margin: 0;
+}
+
+body.present-mode .hero.present-slide::-webkit-scrollbar,
+body.present-mode main > section.present-slide::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 body.present-mode .hero.present-active,
