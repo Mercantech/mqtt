@@ -541,152 +541,278 @@ mqtt.connect(clientId, NULL, NULL,
           <!-- Tab: Showcase -->
           <div class="lab-pane active" id="tab-showcase" role="tabpanel">
             <p class="lab-intro">
-              Alle demos nedenfor kører mod den rigtige broker. Tryk <strong>Forbind</strong>,
-              og prøv knapperne — det er den samme protokol som Opla bruger.
+              Hver blok nedenfor er sin egen live-demo mod den rigtige broker.
+              Tryk <strong>Forbind</strong> øverst, læs forklaringen, og prøv knapperne —
+              det er samme protokol som Arduino Opla bruger.
             </p>
 
             <div class="feature-lab">
 
               <!-- Fan-out -->
-              <article class="feature-card" id="feat-fanout">
-                <div class="feature-card-head">
-                  <span class="feature-tag">01</span>
+              <article class="demo-block" id="feat-fanout">
+                <header class="demo-block-header">
+                  <span class="demo-block-num">01</span>
                   <div>
-                    <h4>One publish → many subscribers</h4>
-                    <p>Afsender kender ikke modtagerne. Ét PUBLISH lander hos alle, der matcher.</p>
+                    <p class="demo-block-kicker">Decoupling · Many-to-many</p>
+                    <h3>Én publish → mange subscribers</h3>
+                  </div>
+                </header>
+                <div class="demo-block-grid">
+                  <div class="demo-block-copy">
+                    <p>
+                      I klassisk HTTP kalder afsender ofte hver modtager direkte.
+                      I MQTT sender du <em>kun til et topic</em>. Brokeren finder
+                      alle, der har subscribed — dashboard, mobil, logger osv.
+                    </p>
+                    <p>
+                      Derfor behøver Arduino Opla ikke kende pensumsiden eller dit
+                      C#-program. Den publicerer; hvem der lytter, er brokerens sag.
+                    </p>
+                    <ol class="demo-steps">
+                      <li>Sørg for at du er forbundet</li>
+                      <li>Tryk <strong>Publish “alarm”</strong></li>
+                      <li>Se de tre “apps” lyse op — samme besked, tre filtre</li>
+                    </ol>
+                    <p class="demo-tip"><strong>Hvorfor det er fedt til IoT:</strong> du kan tilføje nye forbrugere uden at ændre firmware på sensoren.</p>
+                  </div>
+                  <div class="demo-block-stage">
+                    <div class="fanout-visual">
+                      <div class="fanout-pub">
+                        <button type="button" class="btn" id="fanoutPubBtn" disabled>Publish “alarm”</button>
+                        <code>demo/lab/alarm</code>
+                      </div>
+                      <div class="fanout-arrow">⇣ broker fan-out</div>
+                      <div class="fanout-subs" id="fanoutSubs">
+                        <div class="fanout-sub" data-sub="dashboard">Dashboard<br><small>demo/lab/#</small></div>
+                        <div class="fanout-sub" data-sub="phone">Mobil-app<br><small>demo/lab/alarm</small></div>
+                        <div class="fanout-sub" data-sub="logger">Logger<br><small>demo/+/alarm</small></div>
+                      </div>
+                    </div>
+                    <p class="feature-result" id="fanoutResult">Afventer publish…</p>
                   </div>
                 </div>
-                <div class="fanout-visual">
-                  <div class="fanout-pub">
-                    <button type="button" class="btn" id="fanoutPubBtn" disabled>Publish “alarm”</button>
-                    <code>demo/lab/alarm</code>
-                  </div>
-                  <div class="fanout-arrow">⇣ fan-out</div>
-                  <div class="fanout-subs" id="fanoutSubs">
-                    <div class="fanout-sub" data-sub="dashboard">Dashboard<br><small>demo/lab/#</small></div>
-                    <div class="fanout-sub" data-sub="phone">Mobil-app<br><small>demo/lab/alarm</small></div>
-                    <div class="fanout-sub" data-sub="logger">Logger<br><small>demo/+/alarm</small></div>
-                  </div>
-                </div>
-                <p class="feature-result" id="fanoutResult">Afventer publish…</p>
               </article>
 
               <!-- Wildcards -->
-              <article class="feature-card" id="feat-wildcards">
-                <div class="feature-card-head">
-                  <span class="feature-tag">02</span>
+              <article class="demo-block" id="feat-wildcards">
+                <header class="demo-block-header">
+                  <span class="demo-block-num">02</span>
                   <div>
-                    <h4>Wildcards live</h4>
-                    <p>Vælg et filter, publish til flere topics — se hvad der slipper igennem.</p>
+                    <p class="demo-block-kicker">Topics · Filtrering</p>
+                    <h3>Wildcards live</h3>
                   </div>
-                </div>
-                <div class="wildcard-controls">
-                  <label class="chip"><input type="radio" name="wcFilter" value="demo/lab/+/temp" checked> <code>+ </code> ét niveau</label>
-                  <label class="chip"><input type="radio" name="wcFilter" value="demo/lab/#"> <code>#</code> alle under</label>
-                  <label class="chip"><input type="radio" name="wcFilter" value="demo/lab/a/temp"> eksakt</label>
-                </div>
-                <div class="wildcard-actions">
-                  <button type="button" class="btn btn-outline" data-wc-pub="demo/lab/a/temp" disabled>a/temp</button>
-                  <button type="button" class="btn btn-outline" data-wc-pub="demo/lab/b/temp" disabled>b/temp</button>
-                  <button type="button" class="btn btn-outline" data-wc-pub="demo/lab/a/humidity" disabled>a/humidity</button>
-                  <button type="button" class="btn btn-outline" data-wc-pub="demo/lab/x/y/z" disabled>x/y/z</button>
-                </div>
-                <div class="wildcard-inbox" id="wildcardInbox">
-                  <div class="wildcard-empty">Ingen hits endnu — vælg filter og publish</div>
+                </header>
+                <div class="demo-block-grid">
+                  <div class="demo-block-copy">
+                    <p>
+                      Topics er hierarkiske stier. Ved <strong>subscribe</strong> kan du bruge wildcards:
+                    </p>
+                    <ul>
+                      <li><code>+</code> — præcis ét niveau (fx ethvert rum, men kun <code>temp</code>)</li>
+                      <li><code>#</code> — alt under det punkt (hele undertræet)</li>
+                      <li>Eksakt topic — kun den ene kanal</li>
+                    </ul>
+                    <p>
+                      Det er sådan en C#-logger kan lytte på <code>skole/+/temp</code>
+                      uden at kende hvert enkelt rum-ID på forhånd.
+                    </p>
+                    <ol class="demo-steps">
+                      <li>Vælg et filter (<code>+</code>, <code>#</code> eller eksakt)</li>
+                      <li>Publish til forskellige under-topics</li>
+                      <li>Inboxen viser hits — og gule linjer når noget <em>ikke</em> matcher</li>
+                    </ol>
+                    <p class="demo-tip"><strong>Prøv:</strong> vælg <code>demo/lab/+/temp</code> og publish <code>a/humidity</code> — den skal <em>ikke</em> matche.</p>
+                  </div>
+                  <div class="demo-block-stage">
+                    <div class="wildcard-controls">
+                      <label class="chip"><input type="radio" name="wcFilter" value="demo/lab/+/temp" checked> <code>+</code> ét niveau</label>
+                      <label class="chip"><input type="radio" name="wcFilter" value="demo/lab/#"> <code>#</code> alle under</label>
+                      <label class="chip"><input type="radio" name="wcFilter" value="demo/lab/a/temp"> eksakt a/temp</label>
+                    </div>
+                    <div class="wildcard-actions">
+                      <button type="button" class="btn btn-outline" data-wc-pub="demo/lab/a/temp" disabled>a/temp</button>
+                      <button type="button" class="btn btn-outline" data-wc-pub="demo/lab/b/temp" disabled>b/temp</button>
+                      <button type="button" class="btn btn-outline" data-wc-pub="demo/lab/a/humidity" disabled>a/humidity</button>
+                      <button type="button" class="btn btn-outline" data-wc-pub="demo/lab/x/y/z" disabled>x/y/z</button>
+                    </div>
+                    <div class="wildcard-inbox" id="wildcardInbox">
+                      <div class="wildcard-empty">Ingen hits endnu — vælg filter og publish</div>
+                    </div>
+                  </div>
                 </div>
               </article>
 
               <!-- Retain -->
-              <article class="feature-card" id="feat-retain">
-                <div class="feature-card-head">
-                  <span class="feature-tag">03</span>
+              <article class="demo-block" id="feat-retain">
+                <header class="demo-block-header">
+                  <span class="demo-block-num">03</span>
                   <div>
-                    <h4>Retained messages</h4>
-                    <p>Brokeren husker sidste besked. Nye subscribers får den med det samme.</p>
+                    <p class="demo-block-kicker">State · Late join</p>
+                    <h3>Retained messages</h3>
                   </div>
-                </div>
-                <div class="retain-row">
-                  <input type="text" id="retainPayload" value="setpoint=22.5" maxlength="40">
-                  <button type="button" class="btn" id="retainSaveBtn" disabled>Gem retained</button>
-                  <button type="button" class="btn btn-outline" id="retainClearBtn" disabled>Ryd retained</button>
-                </div>
-                <div class="retain-demo">
-                  <div class="retain-box">
-                    <span class="retain-label">Broker gemmer</span>
-                    <code id="retainStored">—</code>
-                    <small>topic: demo/lab/retained</small>
+                </header>
+                <div class="demo-block-grid">
+                  <div class="demo-block-copy">
+                    <p>
+                      Med <strong>retain-flaget</strong> gemmer brokeren den seneste
+                      besked for et topic. Når en ny klient subscriber, får den
+                      straks den gemte værdi — uden at vente på næste publish.
+                    </p>
+                    <p>
+                      Perfekt til ting som “nuværende setpoint”, “lampens tilstand”
+                      eller Opla’s <code>demo/opla/status</code> (online/offline).
+                    </p>
+                    <ol class="demo-steps">
+                      <li>Skriv en payload og tryk <strong>Gem retained</strong></li>
+                      <li>Tryk <strong>Simuler sen subscriber</strong> — en helt ny MQTT-klient oprettes</li>
+                      <li>Den får værdien med det samme ved subscribe</li>
+                      <li><strong>Ryd retained</strong> sender en tom retained besked (MQTT-måden at slette på)</li>
+                    </ol>
+                    <p class="demo-tip"><strong>Hvorfor det er fedt til IoT:</strong> et dashboard der lige er åbnet, ved med det samme hvad verdens tilstand er.</p>
                   </div>
-                  <button type="button" class="btn btn-outline" id="retainLateBtn" disabled>Simuler sen subscriber →</button>
-                  <div class="retain-box highlight">
-                    <span class="retain-label">Modtaget ved connect</span>
-                    <code id="retainLateValue">—</code>
-                    <small id="retainLateMeta">tryk knappen</small>
+                  <div class="demo-block-stage">
+                    <div class="retain-row">
+                      <input type="text" id="retainPayload" value="setpoint=22.5" maxlength="40">
+                      <button type="button" class="btn" id="retainSaveBtn" disabled>Gem retained</button>
+                      <button type="button" class="btn btn-outline" id="retainClearBtn" disabled>Ryd retained</button>
+                    </div>
+                    <div class="retain-demo">
+                      <div class="retain-box">
+                        <span class="retain-label">Broker gemmer</span>
+                        <code id="retainStored">—</code>
+                        <small>topic: demo/lab/retained</small>
+                      </div>
+                      <button type="button" class="btn btn-outline" id="retainLateBtn" disabled>Simuler sen subscriber →</button>
+                      <div class="retain-box highlight">
+                        <span class="retain-label">Modtaget ved connect</span>
+                        <code id="retainLateValue">—</code>
+                        <small id="retainLateMeta">tryk knappen</small>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </article>
 
               <!-- QoS -->
-              <article class="feature-card" id="feat-qos">
-                <div class="feature-card-head">
-                  <span class="feature-tag">04</span>
+              <article class="demo-block" id="feat-qos">
+                <header class="demo-block-header">
+                  <span class="demo-block-num">04</span>
                   <div>
-                    <h4>QoS 0 · 1 · 2</h4>
-                    <p>Samme payload, tre leveringsgarantier. Se bekræftelse og tid.</p>
+                    <p class="demo-block-kicker">Leveringsgaranti</p>
+                    <h3>Quality of Service — 0, 1 og 2</h3>
                   </div>
-                </div>
-                <div class="qos-actions">
-                  <button type="button" class="btn qos-btn qos-0-btn" id="qos0Btn" disabled>Send QoS 0</button>
-                  <button type="button" class="btn qos-btn qos-1-btn" id="qos1Btn" disabled>Send QoS 1</button>
-                  <button type="button" class="btn qos-btn qos-2-btn" id="qos2Btn" disabled>Send QoS 2</button>
-                </div>
-                <div class="qos-results" id="qosResults">
-                  <div class="qos-result" data-qos="0"><span class="qos-badge qos-0">0</span> <span class="qos-result-text">—</span></div>
-                  <div class="qos-result" data-qos="1"><span class="qos-badge qos-1">1</span> <span class="qos-result-text">—</span></div>
-                  <div class="qos-result" data-qos="2"><span class="qos-badge qos-2">2</span> <span class="qos-result-text">—</span></div>
+                </header>
+                <div class="demo-block-grid">
+                  <div class="demo-block-copy">
+                    <p>
+                      QoS er aftalen mellem klient og broker om, hvor sikker levering skal være.
+                      Flere bekræftelsespakker = mere trafik, men stærkere garanti.
+                    </p>
+                    <ul>
+                      <li><span class="qos-badge qos-0">QoS 0</span> At most once — hurtigst, kan gå tabt</li>
+                      <li><span class="qos-badge qos-1">QoS 1</span> At least once — PUBACK, kan komme dobbelt</li>
+                      <li><span class="qos-badge qos-2">QoS 2</span> Exactly once — fuld handshake, langsomst</li>
+                    </ul>
+                    <ol class="demo-steps">
+                      <li>Send samme type besked med hvert QoS-niveau</li>
+                      <li>Sammenlign tiden: QoS 0 er “fire and forget”, 1 og 2 venter på ack</li>
+                      <li>Tænk: hvad passer til temp hvert 5. sek vs. en kritisk kommando?</li>
+                    </ol>
+                    <p class="demo-tip"><strong>Tommelfingerregel:</strong> sensortelemetri = 0, events = 1, kritiske kommandoer = 2.</p>
+                  </div>
+                  <div class="demo-block-stage">
+                    <div class="qos-actions">
+                      <button type="button" class="btn qos-btn qos-0-btn" id="qos0Btn" disabled>Send QoS 0</button>
+                      <button type="button" class="btn qos-btn qos-1-btn" id="qos1Btn" disabled>Send QoS 1</button>
+                      <button type="button" class="btn qos-btn qos-2-btn" id="qos2Btn" disabled>Send QoS 2</button>
+                    </div>
+                    <div class="qos-results" id="qosResults">
+                      <div class="qos-result" data-qos="0"><span class="qos-badge qos-0">0</span> <span class="qos-result-text">—</span></div>
+                      <div class="qos-result" data-qos="1"><span class="qos-badge qos-1">1</span> <span class="qos-result-text">—</span></div>
+                      <div class="qos-result" data-qos="2"><span class="qos-badge qos-2">2</span> <span class="qos-result-text">—</span></div>
+                    </div>
+                  </div>
                 </div>
               </article>
 
               <!-- LWT -->
-              <article class="feature-card" id="feat-lwt">
-                <div class="feature-card-head">
-                  <span class="feature-tag">05</span>
+              <article class="demo-block" id="feat-lwt">
+                <header class="demo-block-header">
+                  <span class="demo-block-num">05</span>
                   <div>
-                    <h4>Last Will &amp; Testament</h4>
-                    <p>Klienten “dør” uden DISCONNECT — brokeren udgiver testamentet automatisk.</p>
+                    <p class="demo-block-kicker">Presence · Fejlhåndtering</p>
+                    <h3>Last Will &amp; Testament</h3>
                   </div>
-                </div>
-                <div class="lwt-row">
-                  <div class="lwt-status-box">
-                    <span class="status-dot" id="lwtDot"></span>
-                    <span id="lwtStatusText">Ingen LWT-klient</span>
-                  </div>
-                  <button type="button" class="btn" id="lwtSpawnBtn" disabled>Start klient m. LWT</button>
-                  <button type="button" class="btn btn-outline" id="lwtKillBtn" disabled>Kill forbindelse</button>
-                  <button type="button" class="btn btn-outline" id="lwtNiceBtn" disabled>Pæn DISCONNECT</button>
-                </div>
-                <p class="feature-result" id="lwtResult">
-                  Opla bruger allerede LWT på <code>demo/opla/status</code> —
-                  prøv også denne browser-demo på <code>demo/lab/will</code>.
-                </p>
-              </article>
-
-              <!-- Bidirectional highlight -->
-              <article class="feature-card feature-card-wide" id="feat-bi">
-                <div class="feature-card-head">
-                  <span class="feature-tag">06</span>
-                  <div>
-                    <h4>Bidirektionelt på samme socket</h4>
+                </header>
+                <div class="demo-block-grid">
+                  <div class="demo-block-copy">
                     <p>
-                      Telemetri ind, kommandoer ud — én TCP/WebSocket-forbindelse.
-                      Skift til fanen <strong>Arduino Opla</strong> og send RGB / buzzer.
-                      Status her spejler Opla’s retained LWT:
+                      Ved CONNECT kan en klient registrere et <strong>testament</strong>:
+                      topic + payload. Hvis forbindelsen dør <em>uden</em> pæn DISCONNECT
+                      (WiFi drop, crash, strømafbrydelse), publicerer brokeren det automatisk.
+                    </p>
+                    <p>
+                      Opla gør det allerede: Last Will sætter <code>demo/opla/status</code>
+                      til <code>offline</code>. Dashboardet behøver ikke gætte — brokeren fortæller det.
+                    </p>
+                    <ol class="demo-steps">
+                      <li><strong>Start klient m. LWT</strong> — registrerer will = offline</li>
+                      <li><strong>Kill forbindelse</strong> — abrupt close → testament udgives</li>
+                      <li>Prøv igen med <strong>Pæn DISCONNECT</strong> — så udføres testamentet <em>ikke</em></li>
+                    </ol>
+                    <p class="demo-tip"><strong>Læg mærke til:</strong> forskellen mellem “kill” og “pæn disconnect” er hele pointeren med LWT.</p>
+                  </div>
+                  <div class="demo-block-stage">
+                    <div class="lwt-row">
+                      <div class="lwt-status-box">
+                        <span class="status-dot" id="lwtDot"></span>
+                        <span id="lwtStatusText">Ingen LWT-klient</span>
+                      </div>
+                      <button type="button" class="btn" id="lwtSpawnBtn" disabled>Start klient m. LWT</button>
+                      <button type="button" class="btn btn-outline" id="lwtKillBtn" disabled>Kill forbindelse</button>
+                      <button type="button" class="btn btn-outline" id="lwtNiceBtn" disabled>Pæn DISCONNECT</button>
+                    </div>
+                    <p class="feature-result" id="lwtResult">
+                      Klar — start en LWT-klient på <code>demo/lab/will</code> (retained).
                     </p>
                   </div>
                 </div>
-                <div class="bi-strip">
-                  <div class="bi-pill"><span class="status-dot" id="oplaStatusDotMini"></span> <span id="oplaStatusTextMini">Opla ukendt</span></div>
-                  <div class="bi-pill">↑ sensors · ↓ cmd/led · ↓ cmd/buzzer</div>
-                  <button type="button" class="btn btn-outline" id="gotoOplaTab">Åbn Opla-styring</button>
+              </article>
+
+              <!-- Bidirectional -->
+              <article class="demo-block" id="feat-bi">
+                <header class="demo-block-header">
+                  <span class="demo-block-num">06</span>
+                  <div>
+                    <p class="demo-block-kicker">Telemetri + kommandoer</p>
+                    <h3>Bidirektionelt på samme forbindelse</h3>
+                  </div>
+                </header>
+                <div class="demo-block-grid">
+                  <div class="demo-block-copy">
+                    <p>
+                      MQTT er ikke kun sensor → cloud. Samme åbne socket kan både
+                      <strong>modtage telemetri</strong> og <strong>sende kommandoer</strong>
+                      (LED-farve, buzzer). Ingen ekstra HTTP-request per kommando.
+                    </p>
+                    <p>
+                      Det er derfor Opla både publicerer temp/fugt/lys og subscriber på
+                      <code>demo/opla/cmd/#</code> — web → broker → enhed, med det samme.
+                    </p>
+                    <ol class="demo-steps">
+                      <li>Tjek Opla-status nedenfor (kommer fra retained LWT/status)</li>
+                      <li>Åbn <strong>Arduino Opla</strong>-fanen</li>
+                      <li>Send en RGB-farve eller bip — se resultatet på hardwaren</li>
+                    </ol>
+                    <p class="demo-tip"><strong>Én session:</strong> keep-alive, QoS og auth gælder begge veje.</p>
+                  </div>
+                  <div class="demo-block-stage">
+                    <div class="bi-strip">
+                      <div class="bi-pill"><span class="status-dot" id="oplaStatusDotMini"></span> <span id="oplaStatusTextMini">Opla ukendt</span></div>
+                      <div class="bi-pill">↑ sensors · ↓ cmd/led · ↓ cmd/buzzer</div>
+                      <button type="button" class="btn" id="gotoOplaTab">Åbn Opla-styring</button>
+                    </div>
+                  </div>
                 </div>
               </article>
 
