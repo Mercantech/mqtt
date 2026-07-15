@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
@@ -909,7 +910,7 @@ mqtt.connect(clientId, NULL, NULL,
         <strong>PubSubClient</strong> og <strong>Arduino_MKRIoTCarrier</strong>.
         Credentials ligger i gitignored <code>secrets.h</code>.
       </p>
-      <pre><code>#include &lt;WiFiNINA.h&gt;
+      <pre class="code-block"><code class="language-cpp">#include &lt;WiFiNINA.h&gt;
 #include &lt;PubSubClient.h&gt;
 #include &lt;Arduino_MKRIoTCarrier.h&gt;
 #include "secrets.h"
@@ -946,7 +947,7 @@ void loop() {
         Med <strong>MQTTnet</strong> kan I subscribe på samme topics som web-demoen
         og bygge et desktop-/server-dashboard.
       </p>
-      <pre><code>// dotnet add package MQTTnet
+      <pre class="code-block"><code class="language-csharp">// dotnet add package MQTTnet
 
 using MQTTnet;
 using MQTTnet.Client;
@@ -1014,6 +1015,9 @@ Console.ReadLine();</code></pre>
   </div>
 
   <script src="https://unpkg.com/mqtt@5.10.4/dist/mqtt.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-cpp.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-csharp.min.js"></script>
   <script src="/js/mqtt-demo.js"></script>
   <script src="/js/present.js"></script>
 </body>

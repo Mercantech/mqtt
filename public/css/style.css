@@ -476,7 +476,7 @@ pre {
   background: #080d16;
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 1.1rem 1.25rem;
+  padding: 0;
   overflow-x: auto;
   margin: 1rem 0;
   font-family: var(--font-mono);
@@ -485,9 +485,32 @@ pre {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
 }
 
-code {
+pre.code-block {
+  padding: 0;
+}
+
+pre code {
+  display: block;
+  padding: 1.1rem 1.25rem;
+  background: transparent !important;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+/* Prism — MQTT-tema tokens */
+code[class*="language-"],
+pre[class*="language-"] {
+  text-shadow: none;
   font-family: var(--font-mono);
-  font-size: 0.875em;
+  font-size: 0.8125rem;
+}
+
+pre[class*="language-"] {
+  margin: 1rem 0;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #080d16 !important;
 }
 
 :not(pre) > code {
@@ -495,6 +518,65 @@ code {
   color: var(--accent);
   padding: 0.15rem 0.4rem;
   border-radius: 5px;
+}
+
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: #6b7f99;
+  font-style: italic;
+}
+
+.token.punctuation {
+  color: #8ea0b8;
+}
+
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol {
+  color: #f5a524;
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted {
+  color: var(--accent);
+}
+
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string {
+  color: #4cc9f0;
+}
+
+.token.atrule,
+.token.attr-value,
+.token.keyword {
+  color: var(--accent-2);
+}
+
+.token.function,
+.token.class-name {
+  color: #c792ea;
+}
+
+.token.regex,
+.token.important,
+.token.variable {
+  color: #ff5c7a;
+}
+
+.token.deleted {
+  color: var(--danger);
 }
 
 /* Topic tree */
