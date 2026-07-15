@@ -213,8 +213,8 @@
     <section id="demo">
       <h2><span class="section-num">05</span> Live MQTT Demo</h2>
       <p>
-        Denne side kører mod en lokal MQTT-broker. Tryk "Forbind" for at
-        subscribe og publish beskeder direkte i browseren via WebSocket.
+        Forbind til brokeren for at se live data fra Arduino Opla og styre
+        RGB-LED'en direkte fra browseren via MQTT.
       </p>
 
       <div class="demo-panel">
@@ -223,24 +223,89 @@
           <button class="btn btn-outline" id="connectBtn">Forbind</button>
         </div>
         <div class="demo-body">
-          <div class="demo-row">
-            <input type="text" id="subTopic" placeholder="Subscribe topic (fx demo/hej)" value="demo/hej">
-            <button class="btn" id="subBtn" disabled>Subscribe</button>
+
+          <!-- Opla dashboard -->
+          <div class="opla-dashboard">
+            <div class="opla-dashboard-header">
+              <div class="opla-title">
+                <span class="opla-icon">◈</span>
+                Arduino Opla
+              </div>
+              <div class="opla-status">
+                <span class="status-dot" id="oplaStatusDot"></span>
+                <span id="oplaStatusText">Afventer data</span>
+              </div>
+            </div>
+
+            <div class="sensor-grid">
+              <div class="sensor-card">
+                <div class="sensor-icon">🌡</div>
+                <div class="sensor-label">Temperatur</div>
+                <div class="sensor-value" id="sensorTemp">—</div>
+                <div class="sensor-unit">°C</div>
+              </div>
+              <div class="sensor-card">
+                <div class="sensor-icon">💧</div>
+                <div class="sensor-label">Luftfugtighed</div>
+                <div class="sensor-value" id="sensorHumidity">—</div>
+                <div class="sensor-unit">%</div>
+              </div>
+              <div class="sensor-card">
+                <div class="sensor-icon">☀</div>
+                <div class="sensor-label">Lys</div>
+                <div class="sensor-value" id="sensorLight">—</div>
+                <div class="sensor-unit">lux</div>
+              </div>
+              <div class="sensor-card">
+                <div class="sensor-icon">👆</div>
+                <div class="sensor-label">Seneste knap</div>
+                <div class="sensor-value sensor-value-sm" id="sensorButton">—</div>
+              </div>
+            </div>
+
+            <div class="control-panel">
+              <h4>Styr Opla</h4>
+              <div class="control-row">
+                <div class="control-label">
+                  <span class="led-preview" id="ledPreview"></span>
+                  RGB LED
+                </div>
+                <div class="control-buttons">
+                  <button class="btn btn-led-on" id="ledOnBtn" disabled>Tænd</button>
+                  <button class="btn btn-outline" id="ledOffBtn" disabled>Sluk</button>
+                  <button class="btn btn-outline" id="buzzerBtn" disabled>Bip</button>
+                </div>
+              </div>
+              <p class="control-hint">
+                Sender til <code>demo/opla/cmd/led</code> og <code>demo/opla/cmd/buzzer</code>
+              </p>
+            </div>
+
+            <div class="last-update" id="lastUpdate">Ingen data modtaget endnu</div>
           </div>
-          <div class="demo-row">
-            <input type="text" id="pubTopic" placeholder="Publish topic" value="demo/hej">
-            <input type="text" id="pubPayload" placeholder="Payload" value="Hej MQTT!">
-            <button class="btn" id="pubBtn" disabled>Publish</button>
-          </div>
-          <div class="message-log" id="messageLog">
-            <div class="log-entry system">Klar — tryk "Forbind" for at starte</div>
-          </div>
+
+          <details class="demo-advanced">
+            <summary>Avanceret — rå MQTT</summary>
+            <div class="demo-row">
+              <input type="text" id="subTopic" placeholder="Subscribe topic" value="demo/opla/#">
+              <button class="btn" id="subBtn" disabled>Subscribe</button>
+            </div>
+            <div class="demo-row">
+              <input type="text" id="pubTopic" placeholder="Publish topic" value="demo/hej">
+              <input type="text" id="pubPayload" placeholder="Payload" value="Hej MQTT!">
+              <button class="btn" id="pubBtn" disabled>Publish</button>
+            </div>
+            <div class="message-log" id="messageLog">
+              <div class="log-entry system">Klar — tryk "Forbind" for at starte</div>
+            </div>
+          </details>
         </div>
       </div>
 
       <p style="font-size:0.8125rem">
-        Broker-adresser: TCP <code>mqtt://localhost:1883</code> ·
-        WebSocket <code>ws://localhost:8888</code>
+        Broker-adresser: TCP <code>mqtt://138.199.155.78:1883</code> ·
+        WebSocket <code>ws://138.199.155.78:8888</code>
+        (lokal: <code>localhost</code>)
       </p>
     </section>
 

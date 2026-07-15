@@ -40,14 +40,32 @@ npm start
 | MQTT (TCP)      | `mqtt://localhost:1883`  | Arduino Opla, C#, andre klienter|
 | MQTT (WebSocket)| `ws://localhost:8888`    | Browser-demo på pensumsiden     |
 
-## Arduino Opla
+## Arduino Opla (MKR WiFi 1010)
 
-Sæt `mqtt_server` i Arduino-koden til din PCs lokale IP-adresse (ikke `localhost` — det peger på enheden selv).
+Sketchen ligger i `Arduino-MQTT/` og publicerer til `demo/opla/*` topics på brokeren.
 
-```cpp
-const char* mqtt_server = "192.168.1.100";
-const int   mqtt_port   = 1883;
-```
+### Opsætning
+
+1. Installer biblioteker i Arduino IDE: **WiFiNINA**, **PubSubClient**, **Arduino_MKRIoTCarrier**
+2. Kopiér `Arduino-MQTT/secrets.h.example` → `secrets.h`
+3. Udfyld WiFi og MQTT (filen er gitignored)
+4. Upload til MKR WiFi 1010 med Opla carrier
+
+### Topics
+
+| Topic | Retning | Beskrivelse |
+|-------|---------|-------------|
+| `demo/opla/temp` | Publish | Temperatur (°C) |
+| `demo/opla/humidity` | Publish | Luftfugtighed (%) |
+| `demo/opla/light` | Publish | Lysniveau |
+| `demo/opla/button` | Publish | Knap-tryk (`btn-0` … `btn-4`) |
+| `demo/opla/status` | Publish | `online` / `offline` (retained) |
+| `demo/opla/cmd/led` | Subscribe | `on` / `off` — styr RGB LED |
+| `demo/opla/cmd/buzzer` | Subscribe | `beep` — afspil lyd |
+
+Subscribe til `demo/opla/#` i pensum-demoen for at se Opla-data live.
+
+Sæt `mqtt_server` i Arduino-koden til brokerens IP (fx `138.199.155.78`).
 
 ## C#
 
