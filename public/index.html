@@ -264,20 +264,14 @@
             </div>
 
             <div class="control-panel">
-              <h4>Styr Opla</h4>
-              <div class="control-row">
-                <div class="control-label">
-                  <span class="led-preview" id="ledPreview"></span>
-                  RGB LED
-                </div>
-                <div class="control-buttons">
-                  <button class="btn btn-led-on" id="ledOnBtn" disabled>Tænd</button>
-                  <button class="btn btn-outline" id="ledOffBtn" disabled>Sluk</button>
-                  <button class="btn btn-outline" id="buzzerBtn" disabled>Bip</button>
-                </div>
+              <h4>Styr Opla — 5 RGB LED'er</h4>
+              <div class="led-grid" id="ledGrid"></div>
+              <div class="control-row control-row-actions">
+                <button class="btn btn-outline" id="ledAllOffBtn" disabled>Sluk alle</button>
+                <button class="btn btn-outline" id="buzzerBtn" disabled>Bip buzzer</button>
               </div>
               <p class="control-hint">
-                Sender til <code>demo/opla/cmd/led</code> og <code>demo/opla/cmd/buzzer</code>
+                Topics: <code>demo/opla/cmd/led/0</code> … <code>/4</code> med payload <code>on</code> / <code>off</code>
               </p>
             </div>
 

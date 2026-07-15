@@ -60,7 +60,8 @@ Sketchen ligger i `Arduino-MQTT/` og publicerer til `demo/opla/*` topics på bro
 | `demo/opla/light` | Publish | Lysniveau |
 | `demo/opla/button` | Publish | Knap-tryk (`btn-0` … `btn-4`) |
 | `demo/opla/status` | Publish | `online` / `offline` (retained) |
-| `demo/opla/cmd/led` | Subscribe | `on` / `off` — styr RGB LED |
+| `demo/opla/cmd/led/0` … `/4` | Subscribe | `on` / `off` — styr hver RGB LED individuelt |
+| `demo/opla/cmd/led` | Subscribe | `on` / `off` — styr alle LED'er |
 | `demo/opla/cmd/buzzer` | Subscribe | `beep` — afspil lyd |
 
 Subscribe til `demo/opla/#` i pensum-demoen for at se Opla-data live.

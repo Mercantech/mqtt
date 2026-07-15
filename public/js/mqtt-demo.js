@@ -1,13 +1,23 @@
 (function () {
   const OPLA_TOPIC = "demo/opla/#";
+  const LED_COUNT = 5;
+  const LED_COLORS = [
+    { r: 0, g: 0, b: 255, label: "Blå" },
+    { r: 0, g: 255, b: 0, label: "Grøn" },
+    { r: 255, g: 0, b: 0, label: "Rød" },
+    { r: 0, g: 255, b: 255, label: "Cyan" },
+    { r: 255, g: 255, b: 255, label: "Hvid" },
+  ];
+
   const TOPICS = {
     status: "demo/opla/status",
     temp: "demo/opla/temp",
     humidity: "demo/opla/humidity",
     light: "demo/opla/light",
     button: "demo/opla/button",
-    cmdLed: "demo/opla/cmd/led",
     cmdBuzzer: "demo/opla/cmd/buzzer",
+    cmdLed: (i) => `demo/opla/cmd/led/${i}`,
+    cmdLedAll: "demo/opla/cmd/led",
   };
 
   const WS_URL = `ws://${location.hostname}:8888`;
@@ -28,13 +38,12 @@
   const sensorLight = document.getElementById("sensorLight");
   const sensorButton = document.getElementById("sensorButton");
   const lastUpdate = document.getElementById("lastUpdate");
-  const ledPreview = document.getElementById("ledPreview");
-  const ledOnBtn = document.getElementById("ledOnBtn");
-  const ledOffBtn = document.getElementById("ledOffBtn");
+  const ledGrid = document.getElementById("ledGrid");
+  const ledAllOffBtn = document.getElementById("ledAllOffBtn");
   const buzzerBtn = document.getElementById("buzzerBtn");
 
   let client = null;
-  let ledOn = false;
+  const ledState = Array(LED_COUNT).fill(false);
 
   function log(text, type) {
     const entry = document.createElement("div");
@@ -50,9 +59,11 @@
     connectBtn.textContent = connected ? "Afbryd" : "Forbind";
     subBtn.disabled = !connected;
     pubBtn.disabled = !connected;
-    ledOnBtn.disabled = !connected;
-    ledOffBtn.disabled = !connected;
+    ledAllOffBtn.disabled = !connected;
     buzzerBtn.disabled = !connected;
+    ledGrid.querySelectorAll("button").forEach((btn) => {
+      btn.disabled = !connected;
+    });
   }
 
   function setOplaOnline(online) {
@@ -73,9 +84,40 @@
     lastUpdate.textContent = "Seneste opdatering: " + now;
   }
 
-  function setLedState(on) {
-    ledOn = on;
-    ledPreview.classList.toggle("active", on);
+  function setLedUi(index, on) {
+    ledState[index] = on;
+    const item = ledGrid.querySelector(`[data-led="${index}"]`);
+    if (!item) return;
+    const preview = item.querySelector(".led-preview");
+    const toggle = item.querySelector(".led-toggle");
+    preview.classList.toggle("active", on);
+    toggle.textContent = on ? "Sluk" : "Tænd";
+    toggle.classList.toggle("btn-led-on", !on);
+    toggle.classList.toggle("btn-outline", on);
+  }
+
+  function buildLedGrid() {
+    ledGrid.innerHTML = "";
+    for (let i = 0; i < LED_COUNT; i++) {
+      const color = LED_COLORS[i];
+      const item = document.createElement("div");
+      item.className = "led-item";
+      item.dataset.led = String(i);
+      item.innerHTML = `
+        <span class="led-preview" style="--led-color: rgb(${color.r},${color.g},${color.b})"></span>
+        <div class="led-meta">
+          <span class="led-index">LED ${i}</span>
+          <span class="led-name">${color.label}</span>
+        </div>
+        <button class="btn btn-led-on led-toggle" disabled>Tænd</button>
+      `;
+      item.querySelector(".led-toggle").addEventListener("click", () => {
+        const next = !ledState[i];
+        publishCmd(TOPICS.cmdLed(i), next ? "on" : "off");
+        setLedUi(i, next);
+      });
+      ledGrid.appendChild(item);
+    }
   }
 
   function handleOplaMessage(topic, payload) {
@@ -190,17 +232,16 @@
     publishCmd(topic, payload);
   });
 
-  ledOnBtn.addEventListener("click", () => {
-    publishCmd(TOPICS.cmdLed, "on");
-    setLedState(true);
-  });
-
-  ledOffBtn.addEventListener("click", () => {
-    publishCmd(TOPICS.cmdLed, "off");
-    setLedState(false);
+  ledAllOffBtn.addEventListener("click", () => {
+    publishCmd(TOPICS.cmdLedAll, "off");
+    for (let i = 0; i < LED_COUNT; i++) {
+      setLedUi(i, false);
+    }
   });
 
   buzzerBtn.addEventListener("click", () => {
     publishCmd(TOPICS.cmdBuzzer, "beep");
   });
+
+  buildLedGrid();
 })();
