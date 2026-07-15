@@ -166,7 +166,8 @@
 
       item.querySelector(".led-off").addEventListener("click", () => {
         publishCmd(TOPICS.cmdLed(i), "off");
-        syncInputsFromColor(item, 0, 0, 0);
+        const { r: lr, g: lg, b: lb } = readLedInputs(item);
+        updateLedPreview(item, lr, lg, lb, false);
       });
 
       updateLedPreview(item, r, g, b, false);
@@ -289,7 +290,8 @@
   ledAllOffBtn.addEventListener("click", () => {
     publishCmd(TOPICS.cmdLedAll, "off");
     ledGrid.querySelectorAll(".led-item").forEach((item) => {
-      syncInputsFromColor(item, 0, 0, 0);
+      const { r, g, b } = readLedInputs(item);
+      updateLedPreview(item, r, g, b, false);
     });
   });
 
