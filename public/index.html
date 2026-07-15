@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MQTT Pensum — Arduino Opla &amp; C#</title>
+  <title>MQTT Pensum — Protokol, IoT &amp; Live Demo</title>
+  <meta name="description" content="Dybdegående dansk pensum om MQTT: hvorfor protokollen passer til IoT, hvordan pub/sub virker, QoS, LWT, retain og live Arduino Opla-demo.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
@@ -18,84 +19,294 @@
     </a>
     <nav>
       <a href="#intro">Intro</a>
+      <a href="#iot">IoT</a>
+      <a href="#protokol">Protokol</a>
       <a href="#arkitektur">Arkitektur</a>
       <a href="#topics">Topics</a>
       <a href="#qos">QoS</a>
-      <a href="#demo">Live demo</a>
+      <a href="#features">Funktioner</a>
+      <a href="#demo">Demo</a>
       <a href="#arduino">Arduino</a>
       <a href="#csharp">C#</a>
     </nav>
   </header>
 
   <div class="hero">
-    <div class="hero-badge">PENSUM · IoT · PUB/SUB</div>
-    <h1>Lær <em>MQTT</em> fra bunden</h1>
-    <p>
-      Message Queuing Telemetry Transport — protokollen der forbinder
-      sensorer, Arduino Opla og C#-applikationer via en central broker.
-    </p>
-    <div class="hero-stats">
-      <div class="stat">
-        <div class="stat-value">1883</div>
-        <div class="stat-label">Standard port</div>
+    <div class="hero-grid">
+      <div>
+        <div class="hero-badge"><span>●</span> Pensum · Protokol · IoT</div>
+        <h1>Forstå <em>MQTT</em> som en IoT-protokol</h1>
+        <p class="hero-lead">
+          Message Queuing Telemetry Transport er designet til ustabile netværk,
+          begrænset båndbredde og tusindvis af små enheder. Her får du teorien
+          bag pub/sub — og en live Opla-demo på samme side.
+        </p>
+        <div class="hero-stats">
+          <div class="stat">
+            <div class="stat-value">~2 B</div>
+            <div class="stat-label">Min. header</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value">1883</div>
+            <div class="stat-label">TCP-port</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value">3</div>
+            <div class="stat-label">QoS-niveauer</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value">Pub/Sub</div>
+            <div class="stat-label">Mønster</div>
+          </div>
+        </div>
       </div>
-      <div class="stat">
-        <div class="stat-value">3</div>
-        <div class="stat-label">QoS-niveauer</div>
-      </div>
-      <div class="stat">
-        <div class="stat-value">Pub/Sub</div>
-        <div class="stat-label">Mønster</div>
+      <div class="hero-panel" aria-hidden="true">
+        <div class="hero-panel-title">
+          Wire log
+          <span>live</span>
+        </div>
+        <div class="packet-line"><span class="packet-tag">CONNECT</span><span class="packet-msg">opla-mkr1010</span></div>
+        <div class="packet-line"><span class="packet-tag">CONNACK</span><span class="packet-msg">rc=0 accepted</span></div>
+        <div class="packet-line"><span class="packet-tag">SUBSCRIBE</span><span class="packet-msg">demo/opla/cmd/#</span></div>
+        <div class="packet-line"><span class="packet-tag">PUBLISH</span><span class="packet-msg">demo/opla/temp → 22.4</span></div>
+        <div class="packet-line"><span class="packet-tag">PUBLISH</span><span class="packet-msg">demo/opla/cmd/led/2 → 255,40,0</span></div>
+        <div class="packet-line"><span class="packet-tag">PINGREQ</span><span class="packet-msg">keep-alive</span></div>
       </div>
     </div>
   </div>
 
   <main>
 
-    <!-- 1. Intro -->
+    <nav class="toc" aria-label="Indholdsfortegnelse">
+      <a href="#intro"><span class="toc-num">01</span><span class="toc-title">Hvad er MQTT?</span></a>
+      <a href="#iot"><span class="toc-num">02</span><span class="toc-title">Hvorfor til IoT?</span></a>
+      <a href="#protokol"><span class="toc-num">03</span><span class="toc-title">Sådan virker protokollen</span></a>
+      <a href="#arkitektur"><span class="toc-num">04</span><span class="toc-title">Pub/Sub-arkitektur</span></a>
+      <a href="#topics"><span class="toc-num">05</span><span class="toc-title">Topics &amp; wildcards</span></a>
+      <a href="#qos"><span class="toc-num">06</span><span class="toc-title">QoS i dybden</span></a>
+      <a href="#features"><span class="toc-num">07</span><span class="toc-title">Retain, LWT, session</span></a>
+      <a href="#demo"><span class="toc-num">08</span><span class="toc-title">Live demo</span></a>
+    </nav>
+
+    <!-- 01 Intro -->
     <section id="intro">
       <h2><span class="section-num">01</span> Hvad er MQTT?</h2>
+      <p class="lead">
+        MQTT er en letvægts <strong>publish/subscribe</strong>-protokol, der kører
+        oven på TCP/IP. Den blev skabt i 1999 af IBM og Arcom (Andy Stanford-Clark
+        &amp; Arlen Nipper) til at sende telemetri fra oliepipelines over satellit —
+        altså netværk med høj latency, pakketab og dyr båndbredde.
+      </p>
       <p>
-        MQTT er en letvægts publish/subscribe-protokol designet til
-        enheder med begrænset båndbredde og strøm — typisk IoT-sensorer,
-        aktuatorer og gateways. Protokollen kører over TCP/IP og bruger
-        en <strong>broker</strong> som mellemmand mellem afsender og modtager.
+        I dag er MQTT de facto-standarden for mange IoT-systemer: smarte bygninger,
+        industri (IIoT), wearables, home automation og cloud-platforme som AWS IoT,
+        Azure IoT Hub og HiveMQ. OASIS har standardiseret protokollen; MQTT 3.1.1
+        og MQTT 5.0 er de mest udbredte versioner i undervisning og produktion.
       </p>
 
       <div class="card-grid">
         <div class="card">
-          <div class="card-icon">📡</div>
+          <div class="card-icon">PUB</div>
           <h4>Publish</h4>
-          <p>En klient sender en besked til et topic via brokeren.</p>
+          <p>En klient sender en besked med topic + payload til brokeren. Den kender ikke sine modtagere.</p>
         </div>
         <div class="card">
-          <div class="card-icon">📬</div>
+          <div class="card-icon">SUB</div>
           <h4>Subscribe</h4>
-          <p>En klient lytter på et eller flere topics og modtager beskeder.</p>
+          <p>En klient beder brokeren om at levere fremtidige beskeder, der matcher ét eller flere topics.</p>
         </div>
         <div class="card">
-          <div class="card-icon">🔀</div>
+          <div class="card-icon">BRK</div>
           <h4>Broker</h4>
-          <p>Central server der router beskeder mellem publishers og subscribers.</p>
+          <p>Central router, der holder forbindelser, matcher topics og leverer beskeder til de rigtige klienter.</p>
         </div>
       </div>
 
-      <h3>Hvorfor MQTT til IoT?</h3>
+      <div class="callout">
+        <strong>Kerneidé:</strong> Afsender og modtager er <em>løst koblede</em>.
+        Arduino Opla behøver ikke vide, at pensum-siden, C#-dashboardet eller
+        andre klienter lytter — den publicerer bare til et topic.
+      </div>
+    </section>
+
+    <!-- 02 IoT -->
+    <section id="iot">
+      <h2><span class="section-num">02</span> Hvorfor MQTT er god til IoT</h2>
+      <p class="lead">
+        IoT-enheder har typisk lidt RAM/flash, kører på batteri eller ustabilt
+        WiFi, og skal kunne håndtere tusindvis af samtidige forbindelser. MQTT
+        er bygget til præcis det — i modsætning til klassisk HTTP.
+      </p>
+
+      <div class="compare-grid">
+        <div class="compare-card http">
+          <h4>HTTP <span class="badge badge-warn">Request/Response</span></h4>
+          <ul>
+            <li>Klienten spørger gentagne gange (polling)</li>
+            <li>Stor header-overhead pr. request</li>
+            <li>Kortvarige forbindelser = mere TCP-handshake</li>
+            <li>Server svarer kun når den bliver spurgt</li>
+            <li>God til web-API’er, tung til små sensorer</li>
+          </ul>
+        </div>
+        <div class="compare-card mqtt">
+          <h4>MQTT <span class="badge badge-ok">Event-drevet</span></h4>
+          <ul>
+            <li>Push når noget sker — ingen unødvendig polling</li>
+            <li>Minimal fixed header (ofte 2 bytes)</li>
+            <li>Langvarig TCP-session + keep-alive</li>
+            <li>Broker pusher til alle subscribers med det samme</li>
+            <li>Designet til telemetri og kommandoer</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>Konkrete IoT-fordele</h3>
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-icon">01</div>
+          <h4>Lav overhead</h4>
+          <p>En temperatur kan sendes som få bytes payload. Mindre radio = længere batteritid og billigere data.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">02</div>
+          <h4>Many-to-many</h4>
+          <p>Én Opla kan forsyne web, C# og logging samtidigt — bare flere subscribers på samme topic.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">03</div>
+          <h4>Ustabilt net</h4>
+          <p>QoS, clean/persistent session og keep-alive hjælper, når WiFi falder ud midlertidigt.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">04</div>
+          <h4>Bidirektionelt</h4>
+          <p>Samme forbindelsen brugt til telemetri <em>og</em> kommandoer (fx RGB-LED fra websiden).</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">05</div>
+          <h4>Skalérbarhed</h4>
+          <p>Brokere er bygget til mange samtidige klienter. Topics organisere data uden hårde API-kontrakter.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">06</div>
+          <h4>Status-awareness</h4>
+          <p>Last Will fortæller resten af systemet, når en enhed mister forbindelsen uventet.</p>
+        </div>
+      </div>
+
+      <h3>Hvornår MQTT <em>ikke</em> er det bedste valg</h3>
       <ul>
-        <li>Minimal overhead — beskeder kan være få bytes</li>
-        <li>Decoupling — publishers kender ikke subscribers (og omvendt)</li>
-        <li>Last Will &amp; Testament — broker sender besked hvis klient dør uventet</li>
-        <li>Retain — broker gemmer seneste besked på et topic til nye subscribers</li>
-        <li>Skalerbar — millioner af enheder kan køre mod én broker</li>
+        <li>Store filoverførsler / media streaming (brug HTTP, WebRTC, S3 osv.)</li>
+        <li>Komplekse request/response-API’er med streng REST-semantik</li>
+        <li>Browser-apps uden WebSocket-broker (almindelig MQTT-TCP virker ikke direkte i browseren)</li>
       </ul>
     </section>
 
-    <!-- 2. Arkitektur -->
-    <section id="arkitektur">
-      <h2><span class="section-num">02</span> Arkitektur</h2>
+    <!-- 03 Protocol -->
+    <section id="protokol">
+      <h2><span class="section-num">03</span> Sådan virker protokollen</h2>
+      <p class="lead">
+        MQTT er en binær protokol. Hver “pakke” (control packet) har en lille
+        header, valgfri variable header og payload. Klient og broker taler
+        ved hjælp af et fast sæt pakettyper.
+      </p>
+
+      <h3>Vigtigste pakettyper</h3>
+      <table class="packet-table">
+        <thead>
+          <tr>
+            <th>Pakke</th>
+            <th>Retning</th>
+            <th>Formål</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>CONNECT</td>
+            <td>Klient → Broker</td>
+            <td>Opret session: Client ID, keep-alive, username/password, Last Will, Clean Session</td>
+          </tr>
+          <tr>
+            <td>CONNACK</td>
+            <td>Broker → Klient</td>
+            <td>Bekræft (eller afvis) forbindelsen med return code</td>
+          </tr>
+          <tr>
+            <td>PUBLISH</td>
+            <td>Begge veje</td>
+            <td>Selve beskeden: topic, payload, QoS, retain-flag</td>
+          </tr>
+          <tr>
+            <td>SUBSCRIBE / SUBACK</td>
+            <td>Klient ↔ Broker</td>
+            <td>Tilmeld topics + bekræft maksimalt QoS</td>
+          </tr>
+          <tr>
+            <td>UNSUBSCRIBE</td>
+            <td>Klient → Broker</td>
+            <td>Afmeld topics</td>
+          </tr>
+          <tr>
+            <td>PINGREQ / PINGRESP</td>
+            <td>Begge veje</td>
+            <td>Keep-alive: “er du der endnu?”</td>
+          </tr>
+          <tr>
+            <td>DISCONNECT</td>
+            <td>Klient → Broker</td>
+            <td>Pæn afkobling (uden at trigge Last Will)</td>
+          </tr>
+          <tr>
+            <td>PUBACK / PUBREC / PUBREL / PUBCOMP</td>
+            <td>Begge veje</td>
+            <td>QoS 1 og QoS 2 bekræftelser</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Forbindelses-livscyklus</h3>
+      <div class="timeline">
+        <div class="timeline-item">
+          <strong>1. TCP-forbindelse</strong>
+          <p>Klient åbner TCP til broker (typisk port 1883 eller 8883 for TLS).</p>
+        </div>
+        <div class="timeline-item">
+          <strong>2. CONNECT + CONNACK</strong>
+          <p>Klient sender Client ID. Broker accepterer (rc=0) eller afviser (fx forkert auth).</p>
+        </div>
+        <div class="timeline-item">
+          <strong>3. SUBSCRIBE / PUBLISH</strong>
+          <p>Klienten tilmelder topics og/eller publicerer data. Broker router beskeder.</p>
+        </div>
+        <div class="timeline-item">
+          <strong>4. Keep-alive</strong>
+          <p>Hvis der er stille for længe, sendes PINGREQ. Svarer brokeren ikke, anses forbindelsen for død.</p>
+        </div>
+        <div class="timeline-item">
+          <strong>5. DISCONNECT eller brud</strong>
+          <p>Pæn lukning med DISCONNECT — eller abrupt brud, som kan udløse Last Will.</p>
+        </div>
+      </div>
+
+      <h3>Ports &amp; transport</h3>
+      <ul>
+        <li><code>1883</code> — standard MQTT over TCP (ukrypteret)</li>
+        <li><code>8883</code> — MQTT over TLS</li>
+        <li><code>8080/8083</code> m.fl. — MQTT over WebSocket (det browsere bruger)</li>
+      </ul>
       <p>
-        I modsætning til HTTP's request/response-model er MQTT event-drevet.
-        Enheder publicerer data når det sker — de poller ikke en server.
+        Denne pensumservers browser-demo bruger WebSocket på port
+        <code>8888</code>. Arduino Opla bruger klassisk TCP på <code>1883</code>.
+      </p>
+    </section>
+
+    <!-- 04 Architecture -->
+    <section id="arkitektur">
+      <h2><span class="section-num">04</span> Pub/Sub-arkitektur</h2>
+      <p class="lead">
+        I modsætning til HTTP’s request/response er MQTT <em>event-drevet</em>.
+        Enheder publicerer, når noget sker — de poller ikke en server.
       </p>
 
       <div class="diagram">
@@ -105,7 +316,7 @@
         </div>
         <div class="diagram-arrow">
           →
-          <span class="sub">PUBLISH<br>temp/living</span>
+          <span class="sub">PUBLISH<br>demo/opla/temp</span>
         </div>
         <div class="diagram-box broker">
           <div class="label">Broker</div>
@@ -113,48 +324,74 @@
         </div>
         <div class="diagram-arrow">
           →
-          <span class="sub">DELIVER<br>temp/living</span>
+          <span class="sub">DELIVER<br>demo/opla/temp</span>
         </div>
         <div class="diagram-box">
           <div class="label">Subscriber</div>
-          <div class="name">C# App</div>
+          <div class="name">Web / C#</div>
         </div>
       </div>
 
-      <h3>CONNECT → SUBSCRIBE → PUBLISH flow</h3>
-      <ol>
-        <li><code>CONNECT</code> — Klient opretter forbindelse til broker (med client ID)</li>
-        <li><code>SUBSCRIBE</code> — Klient tilmelder sig topics den vil lytte på</li>
-        <li><code>PUBLISH</code> — Klient sender payload til et topic</li>
-        <li><code>PINGREQ/PINGRESP</code> — Keep-alive for at holde forbindelsen åben</li>
-        <li><code>DISCONNECT</code> — Graceful afslutning</li>
-      </ol>
+      <h3>Tre roller i jeres projekt</h3>
+      <div class="card-grid">
+        <div class="card">
+          <h4>Publisher — Opla</h4>
+          <p>Læser sensorer og sender temp, fugt, lys. Subscribe også på <code>demo/opla/cmd/#</code> for LED-kommandoer.</p>
+        </div>
+        <div class="card">
+          <h4>Broker — denne server</h4>
+          <p>Aedes-broker i Docker. Router beskeder mellem alle klienter på TCP og WebSocket.</p>
+        </div>
+        <div class="card">
+          <h4>Subscriber — pensumsiden</h4>
+          <p>Browser-MQTT via WebSocket. Viser live data og publicerer RGB-kommandoer tilbage.</p>
+        </div>
+      </div>
+
+      <div class="callout">
+        <strong>Decoupling i praksis:</strong> I kan starte/stoppe web-demoen uden
+        at Opla “går i panik”. Når siden forbinder igen, får den nye PUBLISH’er —
+        og med retain kan den endda få seneste status med det samme.
+      </div>
     </section>
 
-    <!-- 3. Topics -->
+    <!-- 05 Topics -->
     <section id="topics">
-      <h2><span class="section-num">03</span> Topics &amp; Wildcards</h2>
-      <p>
-        Topics er streng-baserede "kanaler". De er hierarkiske og adskilles
-        med <code>/</code>. Topics må <em>ikke</em> starte med <code>/</code>
-        og må ikke indeholde null-tegn.
+      <h2><span class="section-num">05</span> Topics &amp; wildcards</h2>
+      <p class="lead">
+        Topics er UTF-8-strenge, der fungerer som “adresser” for beskeder.
+        Hierarkiet adskilles med <code>/</code>. Brokeren matcher dem — den
+        fortolker ikke payload’en.
       </p>
 
       <div class="topic-tree">
-        <div class="root">skole/</div>
+        <div class="root">demo/</div>
+        <div class="branch">
+          <div class="leaf">opla/status</div>
+          <div class="leaf">opla/temp</div>
+          <div class="leaf">opla/humidity</div>
+          <div class="leaf">opla/light</div>
+          <div class="leaf">opla/button</div>
+          <div class="leaf">opla/cmd/led/0 … /4</div>
+          <div class="leaf">opla/cmd/buzzer</div>
+        </div>
+        <div class="root" style="margin-top:0.85rem">skole/</div>
         <div class="branch">
           <div>rum/101/temp</div>
           <div>rum/101/humidity</div>
           <div>rum/102/temp</div>
         </div>
-        <div class="root" style="margin-top:0.75rem">device/</div>
-        <div class="branch">
-          <div class="leaf">opla-001/status</div>
-          <div class="leaf">opla-001/sensor/light</div>
-        </div>
       </div>
 
-      <h3>Wildcards ved subscribe</h3>
+      <h3>Naming conventions (god praksis)</h3>
+      <ul>
+        <li>Små bogstaver, hierarki fra groft → fint: <code>bygning/etage/rum/sensor</code></li>
+        <li>Undgå ledende <code>/</code> (det skaber et tomt første niveau)</li>
+        <li>Adskil kommandoer fra telemetri: <code>.../cmd/...</code> vs <code>.../temp</code></li>
+        <li>Hold payload simple (tal, JSON, korte strenge)</li>
+      </ul>
+
+      <h3>Wildcards (kun ved subscribe)</h3>
       <table>
         <thead>
           <tr>
@@ -166,55 +403,125 @@
         <tbody>
           <tr>
             <td><code>+</code></td>
-            <td>Ét niveau</td>
-            <td><code>skole/+/temp</code> matcher <code>skole/101/temp</code></td>
+            <td>Præcis ét niveau</td>
+            <td><code>demo/opla/+</code> matcher <code>demo/opla/temp</code>, men ikke <code>demo/opla/cmd/led/0</code></td>
           </tr>
           <tr>
             <td><code>#</code></td>
-            <td>Alle under-niveauer (kun sidst)</td>
-            <td><code>skole/#</code> matcher alt under skole/</td>
+            <td>Nul eller flere niveauer (kun sidst)</td>
+            <td><code>demo/opla/#</code> matcher alt under Opla — også kommandoer og dybe topics</td>
           </tr>
         </tbody>
       </table>
+      <p>
+        I live-demoen subscriber I automatisk til <code>demo/opla/#</code>,
+        så både sensorer og status dukker op.
+      </p>
     </section>
 
-    <!-- 4. QoS -->
+    <!-- 06 QoS -->
     <section id="qos">
-      <h2><span class="section-num">04</span> Quality of Service (QoS)</h2>
-      <p>
-        QoS definerer garantien for levering af beskeder mellem klient og broker.
+      <h2><span class="section-num">06</span> Quality of Service i dybden</h2>
+      <p class="lead">
+        QoS er en kontrakt mellem <em>afsender og broker</em> — og mellem
+        <em>broker og subscriber</em>. De to kan have forskellige niveauer;
+        den lavere “vinder” typisk i den samlede leveringsgaranti.
       </p>
 
       <div class="card">
         <span class="qos-badge qos-0">QoS 0</span>
-        <strong>At most once</strong> — Fire and forget. Ingen bekræftelse.
-        Hurtigst, men besked kan gå tabt.
+        <strong>At most once</strong> — “Fire and forget”. Ingen bekræftelsespakke.
+        Hurtigst og billigst i radio. Besked kan gå tabt ved pakketab.
       </div>
       <div class="card">
         <span class="qos-badge qos-1">QoS 1</span>
-        <strong>At least once</strong> — Bekræftelse (PUBACK).
-        Besked leveres mindst én gang — kan komme som duplikat.
+        <strong>At least once</strong> — PUBLISH → PUBACK. Brokeren bekræfter.
+        Beskeden kommer frem mindst én gang, men kan duplikeres (DUP-flag).
       </div>
       <div class="card">
         <span class="qos-badge qos-2">QoS 2</span>
-        <strong>Exactly once</strong> — 4-trins handshake (PUBREC/PUBREL/PUBCOMP).
-        Garanteret præcis én levering. Langsomst.
+        <strong>Exactly once</strong> — 4-vejs handshake: PUBLISH → PUBREC → PUBREL → PUBCOMP.
+        Ingen tab og ingen dobbeltbehandling. Dyrst i traffic og kompleksitet.
+      </div>
+
+      <h3>QoS 2-flow (forenklet)</h3>
+      <div class="qos-flow">
+        <div class="qos-step"><code>PUBLISH</code><span>Afsender sender besked med Packet ID</span></div>
+        <div class="qos-step"><code>PUBREC</code><span>Modtager: “modtaget — gemt midlertidigt”</span></div>
+        <div class="qos-step"><code>PUBREL</code><span>Afsender: “du må frigive / committe den”</span></div>
+        <div class="qos-step"><code>PUBCOMP</code><span>Modtager: “færdig — præcis én levering”</span></div>
       </div>
 
       <h3>Hvornår bruger man hvad?</h3>
       <ul>
-        <li><span class="qos-badge qos-0">QoS 0</span> Temperaturmålinger hvert 5. sekund — tab er OK</li>
-        <li><span class="qos-badge qos-1">QoS 1</span> Alarmer, dør-events — vigtigt men duplikat OK</li>
-        <li><span class="qos-badge qos-2">QoS 2</span> Betalingsdata, kritiske kommandoer — ingen duplikater</li>
+        <li><span class="qos-badge qos-0">QoS 0</span> Periodisk telemetri (temp hvert 5. sekund) — et tab gør ikke noget</li>
+        <li><span class="qos-badge qos-1">QoS 1</span> Alarmer, knap-events, statusændringer — vigtigt, men duplikat er OK</li>
+        <li><span class="qos-badge qos-2">QoS 2</span> Kritiske kommandoer / transaktioner — må ikke køres dobbelt</li>
+      </ul>
+      <div class="callout">
+        <strong>Tommelfingerregel til Opla-projektet:</strong> sensorer på QoS 0,
+        LED-kommandoer på mindst QoS 0/1, Last Will/status gerne med retain.
+      </div>
+    </section>
+
+    <!-- 07 Features -->
+    <section id="features">
+      <h2><span class="section-num">07</span> Retain, Last Will &amp; session</h2>
+
+      <h3>Retained messages</h3>
+      <p>
+        Sætter du <em>retain</em>-flaget på en PUBLISH, gemmer brokeren den
+        seneste besked for det topic. Nye subscribers får den med det samme —
+        uden at vente på næste publish. Perfekt til <code>status = online/offline</code>
+        eller “nuværende setpunkt”.
+      </p>
+
+      <h3>Last Will and Testament (LWT)</h3>
+      <p>
+        Ved CONNECT kan klienten registrere en “testament”-besked. Hvis
+        forbindelsen dør uden DISCONNECT (WiFi drop, strømafbrydelse, crash),
+        publicerer brokeren testamentet. I jeres Opla-sketch sættes LWT til
+        <code>demo/opla/status = offline</code>.
+      </p>
+      <pre><code>// Konceptuelt (PubSubClient):
+mqtt.connect(clientId, NULL, NULL,
+             "demo/opla/status",  // will topic
+             0,                  // will QoS
+             true,               // will retain
+             "offline");         // will payload</code></pre>
+
+      <h3>Clean Session / Persistent Session</h3>
+      <ul>
+        <li><strong>Clean Session = true</strong> — frisk start. Ingen lagrede subscriptions/QoS-køer.</li>
+        <li><strong>Clean Session = false</strong> — broker husker subscriptions og undleverede QoS 1/2-beskeder.</li>
+      </ul>
+      <p>
+        Demo-browseren bruger clean session (simpelt). Batteridrevne noder,
+        der kun vågner lejlighedsvis, bruger ofte persistent session.
+      </p>
+
+      <h3>Keep-alive</h3>
+      <p>
+        Et sekund-interval aftalt i CONNECT. Er der ingen trafik inden for
+        ca. 1,5 × keep-alive, forventes PINGREQ/PINGRESP — ellers antages
+        forbindelsen tabt.
+      </p>
+
+      <h3>Sikkerhed (kort)</h3>
+      <ul>
+        <li>Brug TLS på port 8883 i produktion</li>
+        <li>Username/password eller certifikater på CONNECT</li>
+        <li>ACL på brokeren: hvem må publish/subscribe hvilke topics?</li>
+        <li>Undgå åbne brokers på internettet uden auth</li>
       </ul>
     </section>
 
-    <!-- 5. Live Demo -->
+    <!-- 08 Live Demo -->
     <section id="demo">
-      <h2><span class="section-num">05</span> Live MQTT Demo</h2>
-      <p>
+      <h2><span class="section-num">08</span> Live MQTT Demo</h2>
+      <p class="lead">
         Forbind til brokeren for at se live data fra Arduino Opla og styre
-        RGB-LED'en direkte fra browseren via MQTT.
+        RGB-LED’erne direkte fra browseren — præcis samme pub/sub-mekanik som i teorien.
       </p>
 
       <div class="demo-panel">
@@ -224,7 +531,6 @@
         </div>
         <div class="demo-body">
 
-          <!-- Opla dashboard -->
           <div class="opla-dashboard">
             <div class="opla-dashboard-header">
               <div class="opla-title">
@@ -297,69 +603,58 @@
         </div>
       </div>
 
-      <p style="font-size:0.8125rem">
-        Broker-adresser: TCP <code>mqtt://138.199.155.78:1883</code> ·
+      <p style="font-size:0.8125rem;color:var(--text-muted)">
+        Broker: TCP <code>mqtt://138.199.155.78:1883</code> ·
         WebSocket <code>ws://138.199.155.78:8888</code>
         (lokal: <code>localhost</code>)
       </p>
     </section>
 
-    <!-- 6. Arduino Opla -->
+    <!-- Arduino -->
     <section id="arduino">
-      <h2><span class="section-num">06</span> Arduino Opla</h2>
+      <h2><span class="section-num">09</span> Arduino Opla i praksis</h2>
       <p>
-        Arduino Opla har indbygget WiFi og kan bruge
-        <code>PubSubClient</code>-biblioteket til MQTT. Her er et
-        grundlæggende eksempel der publicerer temperatur.
+        MKR WiFi 1010 + IoT Carrier bruger <strong>WiFiNINA</strong>,
+        <strong>PubSubClient</strong> og <strong>Arduino_MKRIoTCarrier</strong>.
+        Credentials ligger i gitignored <code>secrets.h</code>.
       </p>
-
-      <pre><code>#include &lt;WiFiS3.h&gt;
+      <pre><code>#include &lt;WiFiNINA.h&gt;
 #include &lt;PubSubClient.h&gt;
-
-const char* ssid     = "DIT_WIFI";
-const char* password = "DIT_PASSWORD";
-const char* mqtt_server = "192.168.1.100";  // Din PC's IP
-const int   mqtt_port   = 1883;
+#include &lt;Arduino_MKRIoTCarrier.h&gt;
+#include "secrets.h"
 
 WiFiClient wifiClient;
-PubSubClient client(wifiClient);
+PubSubClient mqtt(wifiClient);
+MKRIoTCarrier carrier;
 
 void setup() {
-  Serial.begin(9600);
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) delay(500);
-
-  client.setServer(mqtt_server, mqtt_port);
-  client.connect("opla-sensor-01");
+  carrier.begin();
+  WiFi.begin(SECRET_SSID, SECRET_PASS);
+  mqtt.setServer(MQTT_SERVER, MQTT_PORT);
+  // LWT: status → offline hvis WiFi dør
+  mqtt.connect(MQTT_CLIENT_ID, NULL, NULL,
+               "demo/opla/status", 0, true, "offline");
+  mqtt.publish("demo/opla/status", "online", true);
+  mqtt.subscribe("demo/opla/cmd/#");
 }
 
 void loop() {
-  if (!client.connected()) client.connect("opla-sensor-01");
-
-  float temp = 22.5;  // Læs fra rigtig sensor
-  char msg[16];
-  dtostrf(temp, 4, 1, msg);
-  client.publish("skole/rum/101/temp", msg);
-
-  client.loop();
-  delay(5000);
+  mqtt.loop();
+  // Publisér sensorer med jævne mellemrum…
 }</code></pre>
-
-      <h3>Installér biblioteker i Arduino IDE</h3>
       <ul>
-        <li><strong>PubSubClient</strong> af Nick O'Leary (via Library Manager)</li>
-        <li>WiFiS3 er inkluderet med Arduino Opla board package</li>
+        <li>Telemetri: <code>demo/opla/temp|humidity|light|button</code></li>
+        <li>Kommandoer: <code>demo/opla/cmd/led/N</code> med <code>R,G,B</code> eller <code>off</code></li>
       </ul>
     </section>
 
-    <!-- 7. C# -->
+    <!-- C# -->
     <section id="csharp">
-      <h2><span class="section-num">07</span> C# med MQTTnet</h2>
+      <h2><span class="section-num">10</span> C# med MQTTnet</h2>
       <p>
-        I C# bruger vi <strong>MQTTnet</strong>-NuGet-pakken til at subscribe
-        og modtage data fra Arduino-enheder.
+        Med <strong>MQTTnet</strong> kan I subscribe på samme topics som web-demoen
+        og bygge et desktop-/server-dashboard.
       </p>
-
       <pre><code>// dotnet add package MQTTnet
 
 using MQTTnet;
@@ -369,7 +664,7 @@ var factory = new MqttFactory();
 var client = factory.CreateMqttClient();
 
 var options = new MqttClientOptionsBuilder()
-    .WithTcpServer("localhost", 1883)
+    .WithTcpServer("138.199.155.78", 1883)
     .WithClientId("csharp-dashboard")
     .Build();
 
@@ -381,39 +676,22 @@ client.ApplicationMessageReceivedAsync += e =&gt; {
 };
 
 await client.ConnectAsync(options);
-await client.SubscribeAsync("skole/+/temp");
-
-Console.WriteLine("Lytter på skole/+/temp — tryk Enter for at stoppe");
-Console.ReadLine();
-await client.DisconnectAsync();</code></pre>
-
-      <h3>Typisk projektopbygning</h3>
-      <div class="card-grid">
-        <div class="card">
-          <h4>Publisher (Arduino)</h4>
-          <p>Sensor → publish til topic → broker</p>
-        </div>
-        <div class="card">
-          <h4>Broker (denne server)</h4>
-          <p>Router beskeder mellem alle klienter</p>
-        </div>
-        <div class="card">
-          <h4>Subscriber (C#)</h4>
-          <p>Subscribe med wildcard → vis data i dashboard</p>
-        </div>
-      </div>
+await client.SubscribeAsync("demo/opla/#");
+Console.WriteLine("Lytter…");
+Console.ReadLine();</code></pre>
     </section>
 
-    <!-- 8. Øvelser -->
+    <!-- Exercises -->
     <section id="oevelser">
-      <h2><span class="section-num">08</span> Øvelser</h2>
-      <ol>
-        <li>Start serveren med <code>npm start</code> og forbind via live demo'en</li>
-        <li>Publish en besked og verificér at du modtager den som subscriber</li>
-        <li>Test wildcards: subscribe til <code>demo/#</code> og publish til flere under-topics</li>
-        <li>Forbind Arduino Opla til brokeren og læs data i C#-programmet</li>
-        <li>Implementér Last Will: sæt <code>skole/opla-001/status</code> til "offline" ved disconnect</li>
-        <li>Sammenlign QoS 0 vs QoS 1 ved at slukke WiFi midt i publish</li>
+      <h2><span class="section-num">11</span> Øvelser</h2>
+      <ol class="exercise-list">
+        <li>Forklar forskellen på HTTP-polling og MQTT-push med et eksempel fra Opla-projektet.</li>
+        <li>Tegn CONNECT → SUBSCRIBE → PUBLISH → DISCONNECT for jeres setup (Opla + web).</li>
+        <li>Subscribe til <code>demo/opla/+</code> vs <code>demo/opla/#</code> — hvad mangler i den første?</li>
+        <li>Send LED-farve <code>0,0,255</code> til LED 0 og verificér både web-log og Opla-skærm.</li>
+        <li>Sluk Opla abrupt (USB ud). Bekræft at retained LWT sætter status til <code>offline</code>.</li>
+        <li>Argumentér for QoS 0 vs 1 for temperatur og for LED-kommandoer.</li>
+        <li>Udvid C#-klienten til også at publicere en LED-kommando.</li>
       </ol>
     </section>
 
@@ -422,6 +700,7 @@ await client.DisconnectAsync();</code></pre>
   <footer>
     MQTT Pensum · Arduino Opla &amp; C# ·
     <a href="https://mqtt.org" target="_blank" rel="noopener">mqtt.org</a>
+    · OASIS MQTT standard
   </footer>
 
   <script src="https://unpkg.com/mqtt@5.10.4/dist/mqtt.min.js"></script>
