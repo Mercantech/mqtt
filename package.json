@@ -1,0 +1,18 @@
+{
+  "name": "mqtt-pensum",
+  "version": "1.0.0",
+  "description": "MQTT pensum og undervisningsserver til Arduino Opla og C#",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js"
+  },
+  "keywords": ["mqtt", "pensum", "arduino", "opla", "csharp"],
+  "license": "MIT",
+  "dependencies": {
+    "aedes": "^0.51.3",
+    "express": "^4.21.2",
+    "mqtt": "^5.10.4",
+    "ws": "^8.18.1"
+  }
+}

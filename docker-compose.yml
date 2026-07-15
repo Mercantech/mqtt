@@ -1,0 +1,13 @@
+services:
+  mqtt-pensum:
+    build: .
+    container_name: mqtt-pensum
+    ports:
+      - "3000:3000"   # Pensum (HTTP)
+      - "1883:1883"   # MQTT (TCP)
+      - "8888:8888"   # MQTT (WebSocket)
+    environment:
+      HTTP_PORT: 3000
+      MQTT_PORT: 1883
+      WS_PORT: 8888
+    restart: unless-stopped
