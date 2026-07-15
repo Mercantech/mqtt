@@ -40,6 +40,15 @@ const unsigned long MQTT_RETRY_MS       = 5000;
 const unsigned long DISPLAY_REFRESH_MS  = 1000;
 const unsigned long ACTIVITY_SHOW_MS    = 3500;
 
+// Layout til rund 240×240 skærm — hold indhold i sikker zone
+const int SAFE_X = 48;
+const int SAFE_W = 144;
+const int Y_TITLE    = 56;
+const int Y_STATUS   = 74;
+const int Y_SENSORS  = 92;
+const int Y_LEDS     = 132;
+const int Y_ACTIVITY = 158;
+
 // RGB565 — MQTT-tema
 const uint16_t COLOR_BG     = 0x0841;
 const uint16_t COLOR_PANEL  = 0x10A2;
@@ -69,7 +78,7 @@ struct UiState {
   int light      = 0;
   bool wifiOk    = false;
   bool mqttOk    = false;
-  bool ledOn[5]  = {false, false, false, false, false};
+  uint8_t ledRgb[5][3] = {{0,0,0},{0,0,0},{0,0,0},{0,0,0},{0,0,0}};
   char activity[28];
   char phase[16];
 };
@@ -89,92 +98,97 @@ void displayActivity(const char* msg) {
   displayRedraw();
 }
 
-void drawStatusPill(int x, int y, const __FlashStringHelper* label, bool on, uint16_t color) {
-  carrier.display.fillRoundRect(x, y, 52, 18, 4, on ? color : COLOR_DIM);
-  carrier.display.setTextSize(1);
-  carrier.display.setTextColor(on ? COLOR_BG : COLOR_LABEL, on ? color : COLOR_DIM);
-  carrier.display.setCursor(x + 6, y + 5);
-  carrier.display.print(label);
+void drawStatusDot(int x, int y, bool on, uint16_t color) {
+  carrier.display.fillCircle(x, y, 4, on ? color : COLOR_DIM);
 }
 
 void drawLedDots() {
-  carrier.display.setTextSize(1);
-  carrier.display.setTextColor(COLOR_LABEL, COLOR_BG);
-  carrier.display.setCursor(18, 152);
-  carrier.display.print(F("RGB LED"));
-
+  int startX = 76;
   for (int i = 0; i < 5; i++) {
-    int x = 88 + i * 26;
-    int y = 158;
-    uint16_t c = ui.ledOn[i] ? carrier.leds.Color(LED_COLORS[i][0], LED_COLORS[i][1], LED_COLORS[i][2]) : COLOR_DIM;
-    carrier.display.fillCircle(x, y, 7, c);
-    if (ui.ledOn[i]) {
-      carrier.display.drawCircle(x, y, 8, ST77XX_WHITE);
-    }
-    carrier.display.setTextColor(COLOR_LABEL, COLOR_BG);
-    carrier.display.setCursor(x - 3, y + 12);
-    carrier.display.print(i);
+    int x = startX + i * 24;
+    int y = Y_LEDS;
+    uint16_t c = (ui.ledRgb[i][0] || ui.ledRgb[i][1] || ui.ledRgb[i][2])
+      ? carrier.leds.Color(ui.ledRgb[i][0], ui.ledRgb[i][1], ui.ledRgb[i][2])
+      : COLOR_DIM;
+    carrier.display.fillCircle(x, y, 5, c);
   }
 }
 
-void drawSensorCard(int x, int y, int w, int h, uint16_t accent, const __FlashStringHelper* label, const char* value, const __FlashStringHelper* unit) {
-  carrier.display.fillRoundRect(x, y, w, h, 6, COLOR_PANEL);
-  carrier.display.drawRoundRect(x, y, w, h, 6, accent);
+void drawSensorRow() {
+  char buf[8];
+
+  carrier.display.fillRoundRect(SAFE_X, Y_SENSORS, SAFE_W, 36, 6, COLOR_PANEL);
+
   carrier.display.setTextSize(1);
-  carrier.display.setTextColor(accent, COLOR_PANEL);
-  carrier.display.setCursor(x + 8, y + 8);
-  carrier.display.print(label);
+  carrier.display.setTextColor(COLOR_TEMP, COLOR_PANEL);
+  carrier.display.setCursor(SAFE_X + 8, Y_SENSORS + 4);
+  carrier.display.print(F("TEMP"));
+  carrier.display.setTextColor(COLOR_HUM, COLOR_PANEL);
+  carrier.display.setCursor(SAFE_X + 54, Y_SENSORS + 4);
+  carrier.display.print(F("FUGT"));
+  carrier.display.setTextColor(COLOR_LUX, COLOR_PANEL);
+  carrier.display.setCursor(SAFE_X + 100, Y_SENSORS + 4);
+  carrier.display.print(F("LYS"));
+
   carrier.display.setTextSize(2);
   carrier.display.setTextColor(ST77XX_WHITE, COLOR_PANEL);
-  carrier.display.setCursor(x + 8, y + 26);
-  carrier.display.print(value);
-  carrier.display.setTextSize(1);
-  carrier.display.setTextColor(COLOR_LABEL, COLOR_PANEL);
-  carrier.display.print(unit);
+
+  snprintf(buf, sizeof(buf), "%.0f", ui.temp);
+  carrier.display.setCursor(SAFE_X + 8, Y_SENSORS + 16);
+  carrier.display.print(buf);
+
+  snprintf(buf, sizeof(buf), "%.0f", ui.humidity);
+  carrier.display.setCursor(SAFE_X + 54, Y_SENSORS + 16);
+  carrier.display.print(buf);
+
+  snprintf(buf, sizeof(buf), "%d", ui.light);
+  carrier.display.setCursor(SAFE_X + 100, Y_SENSORS + 16);
+  carrier.display.print(buf);
 }
 
-void drawActivityBar() {
-  carrier.display.fillRect(0, 208, 240, 32, COLOR_PANEL);
-  carrier.display.fillRect(0, 208, 240, 2, COLOR_ACCENT);
+void drawActivityLine() {
+  carrier.display.fillRoundRect(SAFE_X, Y_ACTIVITY, SAFE_W, 22, 5, COLOR_PANEL);
 
   carrier.display.setTextSize(1);
+  carrier.display.setCursor(SAFE_X + 8, Y_ACTIVITY + 7);
+
   if (millis() < activityUntil && ui.activity[0] != '\0') {
     carrier.display.setTextColor(COLOR_ACCENT, COLOR_PANEL);
-    carrier.display.setCursor(8, 220);
-    carrier.display.print(F(">> "));
+    carrier.display.print(F("> "));
     carrier.display.setTextColor(ST77XX_WHITE, COLOR_PANEL);
     carrier.display.print(ui.activity);
+  } else if (ui.mqttOk) {
+    carrier.display.setTextColor(COLOR_MQTT, COLOR_PANEL);
+    carrier.display.print(F("MQTT live"));
   } else {
     carrier.display.setTextColor(COLOR_LABEL, COLOR_PANEL);
-    carrier.display.setCursor(8, 220);
-    carrier.display.print(F("demo/opla/#  pensum MQTT IoT"));
+    carrier.display.print(F("Venter..."));
+  }
+}
+
+void drawCenteredTitle(const __FlashStringHelper* line1, const __FlashStringHelper* line2, uint16_t color1) {
+  carrier.display.setTextSize(2);
+  carrier.display.setTextColor(color1, COLOR_BG);
+  carrier.display.setCursor(72, 88);
+  carrier.display.print(line1);
+
+  if (line2) {
+    carrier.display.setTextSize(1);
+    carrier.display.setTextColor(COLOR_LABEL, COLOR_BG);
+    carrier.display.setCursor(78, 116);
+    carrier.display.print(line2);
   }
 }
 
 void displaySplash() {
   carrier.display.fillScreen(COLOR_BG);
-  carrier.display.fillRect(0, 0, 240, 5, COLOR_ACCENT);
-  carrier.display.fillRect(0, 235, 240, 5, COLOR_ACCENT);
+  drawCenteredTitle(F("MQTT"), F("PENSUM"), COLOR_ACCENT);
 
-  carrier.display.setTextSize(2);
-  carrier.display.setTextColor(COLOR_ACCENT, COLOR_BG);
-  carrier.display.setCursor(58, 82);
-  carrier.display.print(F("MQTT"));
-
-  carrier.display.setTextSize(2);
-  carrier.display.setTextColor(ST77XX_WHITE, COLOR_BG);
-  carrier.display.setCursor(46, 110);
-  carrier.display.print(F("PENSUM"));
-
+  carrier.display.drawCircle(120, 120, 92, COLOR_ACCENT);
   carrier.display.setTextSize(1);
-  carrier.display.setTextColor(COLOR_LABEL, COLOR_BG);
-  carrier.display.setCursor(62, 142);
-  carrier.display.print(F("Opla MKR1010"));
-
-  carrier.display.drawRoundRect(30, 165, 180, 36, 8, COLOR_ACCENT);
   carrier.display.setTextColor(COLOR_ACCENT, COLOR_BG);
-  carrier.display.setCursor(52, 178);
-  carrier.display.print(F("Pub/Sub  Broker  Web"));
+  carrier.display.setCursor(68, 136);
+  carrier.display.print(F("Opla IoT Demo"));
 }
 
 void displayShowPhase(const char* phase) {
@@ -182,20 +196,10 @@ void displayShowPhase(const char* phase) {
   ui.phase[sizeof(ui.phase) - 1] = '\0';
 
   carrier.display.fillScreen(COLOR_BG);
-  carrier.display.fillRect(0, 0, 240, 4, COLOR_ACCENT);
-
-  carrier.display.setTextSize(2);
-  carrier.display.setTextColor(COLOR_ACCENT, COLOR_BG);
-  carrier.display.setCursor(72, 90);
-  carrier.display.print(F("MQTT"));
-
-  carrier.display.setTextSize(1);
-  carrier.display.setTextColor(ST77XX_WHITE, COLOR_BG);
-  carrier.display.setCursor(78, 118);
-  carrier.display.print(F("Forbinder..."));
+  drawCenteredTitle(F("MQTT"), F("Forbinder..."), COLOR_ACCENT);
 
   carrier.display.setTextColor(COLOR_WIFI, COLOR_BG);
-  carrier.display.setCursor(72, 145);
+  carrier.display.setCursor(88, 136);
   carrier.display.print(phase);
 
   splashFrame = millis();
@@ -204,9 +208,9 @@ void displayShowPhase(const char* phase) {
 void displayAnimateConnecting() {
   if (ui.phase[0] == '\0') return;
   int dots = (millis() / 400) % 4;
-  carrier.display.fillRect(72, 162, 96, 10, COLOR_BG);
+  carrier.display.fillRect(88, 152, 64, 10, COLOR_BG);
   carrier.display.setTextColor(COLOR_LABEL, COLOR_BG);
-  carrier.display.setCursor(72, 162);
+  carrier.display.setCursor(88, 152);
   for (int i = 0; i < dots; i++) {
     carrier.display.print('.');
   }
@@ -218,38 +222,25 @@ void displayRedraw() {
 
   carrier.display.fillScreen(COLOR_BG);
 
-  carrier.display.fillRect(0, 0, 240, 34, COLOR_PANEL);
-  carrier.display.fillRect(0, 32, 240, 2, COLOR_ACCENT);
   carrier.display.setTextSize(1);
-  carrier.display.setTextColor(COLOR_ACCENT, COLOR_PANEL);
-  carrier.display.setCursor(10, 12);
+  carrier.display.setTextColor(COLOR_ACCENT, COLOR_BG);
+  carrier.display.setCursor(78, Y_TITLE);
   carrier.display.print(F("MQTT PENSUM"));
-  drawStatusPill(118, 8, F("WiFi"), ui.wifiOk, COLOR_WIFI);
-  drawStatusPill(178, 8, F("MQTT"), ui.mqttOk, COLOR_MQTT);
 
-  char buf[12];
+  drawStatusDot(82, Y_STATUS, ui.wifiOk, COLOR_WIFI);
+  carrier.display.setTextColor(ui.wifiOk ? COLOR_WIFI : COLOR_LABEL, COLOR_BG);
+  carrier.display.setCursor(92, Y_STATUS - 4);
+  carrier.display.print(F("WiFi"));
 
-  snprintf(buf, sizeof(buf), "%.1f", ui.temp);
-  drawSensorCard(10, 44, 108, 56, COLOR_TEMP, F("TEMP"), buf, F(" C"));
+  drawStatusDot(148, Y_STATUS, ui.mqttOk, COLOR_MQTT);
+  carrier.display.setTextColor(ui.mqttOk ? COLOR_MQTT : COLOR_LABEL, COLOR_BG);
+  carrier.display.setCursor(158, Y_STATUS - 4);
+  carrier.display.print(F("MQTT"));
 
-  snprintf(buf, sizeof(buf), "%.0f", ui.humidity);
-  drawSensorCard(122, 44, 108, 56, COLOR_HUM, F("FUGT"), buf, F(" %"));
-
-  snprintf(buf, sizeof(buf), "%d", ui.light);
-  drawSensorCard(10, 106, 220, 40, COLOR_LUX, F("LYS"), buf, F(" lux"));
-
+  drawSensorRow();
   drawLedDots();
+  drawActivityLine();
 
-  carrier.display.fillRoundRect(10, 188, 220, 16, 4, COLOR_PANEL);
-  carrier.display.setTextSize(1);
-  carrier.display.setTextColor(COLOR_LABEL, COLOR_PANEL);
-  carrier.display.setCursor(14, 193);
-  carrier.display.print(F("Broker "));
-  carrier.display.setTextColor(COLOR_ACCENT, COLOR_PANEL);
-  carrier.display.print(MQTT_SERVER);
-  carrier.display.print(F(":1883"));
-
-  drawActivityBar();
   lastDisplayDraw = millis();
 }
 
@@ -277,7 +268,9 @@ void displayTick() {
 void setLedQuiet(int index, uint8_t r, uint8_t g, uint8_t b) {
   if (index < 0 || index >= 5) return;
   carrier.leds.setPixelColor(index, r, g, b);
-  ui.ledOn[index] = (r > 0 || g > 0 || b > 0);
+  ui.ledRgb[index][0] = r;
+  ui.ledRgb[index][1] = g;
+  ui.ledRgb[index][2] = b;
 }
 
 void setLed(int index, uint8_t r, uint8_t g, uint8_t b) {
@@ -304,7 +297,13 @@ void setLedFromCommand(int index, const char* cmd) {
 
   int r, g, b;
   if (sscanf(cmd, "%d,%d,%d", &r, &g, &b) == 3) {
+    r = constrain(r, 0, 255);
+    g = constrain(g, 0, 255);
+    b = constrain(b, 0, 255);
     setLed(index, (uint8_t)r, (uint8_t)g, (uint8_t)b);
+    char msg[20];
+    snprintf(msg, sizeof(msg), "LED %d farve", index);
+    displayActivity(msg);
   }
 }
 

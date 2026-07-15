@@ -1,12 +1,12 @@
 (function () {
   const OPLA_TOPIC = "demo/opla/#";
   const LED_COUNT = 5;
-  const LED_COLORS = [
-    { r: 0, g: 0, b: 255, label: "Blå" },
-    { r: 0, g: 255, b: 0, label: "Grøn" },
-    { r: 255, g: 0, b: 0, label: "Rød" },
-    { r: 0, g: 255, b: 255, label: "Cyan" },
-    { r: 255, g: 255, b: 255, label: "Hvid" },
+  const DEFAULT_COLORS = [
+    { r: 0, g: 0, b: 255 },
+    { r: 0, g: 255, b: 0 },
+    { r: 255, g: 0, b: 0 },
+    { r: 0, g: 255, b: 255 },
+    { r: 255, g: 255, b: 255 },
   ];
 
   const TOPICS = {
@@ -43,7 +43,15 @@
   const buzzerBtn = document.getElementById("buzzerBtn");
 
   let client = null;
-  const ledState = Array(LED_COUNT).fill(false);
+
+  function rgbToHex(r, g, b) {
+    return "#" + [r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("");
+  }
+
+  function hexToRgb(hex) {
+    const n = parseInt(hex.slice(1), 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  }
 
   function log(text, type) {
     const entry = document.createElement("div");
@@ -61,8 +69,8 @@
     pubBtn.disabled = !connected;
     ledAllOffBtn.disabled = !connected;
     buzzerBtn.disabled = !connected;
-    ledGrid.querySelectorAll("button").forEach((btn) => {
-      btn.disabled = !connected;
+    ledGrid.querySelectorAll("button, input").forEach((el) => {
+      el.disabled = !connected;
     });
   }
 
@@ -84,38 +92,84 @@
     lastUpdate.textContent = "Seneste opdatering: " + now;
   }
 
-  function setLedUi(index, on) {
-    ledState[index] = on;
-    const item = ledGrid.querySelector(`[data-led="${index}"]`);
-    if (!item) return;
+  function updateLedPreview(item, r, g, b, active) {
     const preview = item.querySelector(".led-preview");
-    const toggle = item.querySelector(".led-toggle");
-    preview.classList.toggle("active", on);
-    toggle.textContent = on ? "Sluk" : "Tænd";
-    toggle.classList.toggle("btn-led-on", !on);
-    toggle.classList.toggle("btn-outline", on);
+    preview.style.setProperty("--led-color", `rgb(${r},${g},${b})`);
+    preview.classList.toggle("active", active);
+    item.querySelector(".led-rgb-text").textContent = `${r}, ${g}, ${b}`;
+  }
+
+  function readLedInputs(item) {
+    const r = Math.min(255, Math.max(0, parseInt(item.querySelector(".led-r").value, 10) || 0));
+    const g = Math.min(255, Math.max(0, parseInt(item.querySelector(".led-g").value, 10) || 0));
+    const b = Math.min(255, Math.max(0, parseInt(item.querySelector(".led-b").value, 10) || 0));
+    return { r, g, b };
+  }
+
+  function syncInputsFromColor(item, r, g, b) {
+    item.querySelector(".led-color-input").value = rgbToHex(r, g, b);
+    item.querySelector(".led-r").value = r;
+    item.querySelector(".led-g").value = g;
+    item.querySelector(".led-b").value = b;
+    updateLedPreview(item, r, g, b, r > 0 || g > 0 || b > 0);
   }
 
   function buildLedGrid() {
     ledGrid.innerHTML = "";
+
     for (let i = 0; i < LED_COUNT; i++) {
-      const color = LED_COLORS[i];
+      const { r, g, b } = DEFAULT_COLORS[i];
       const item = document.createElement("div");
       item.className = "led-item";
       item.dataset.led = String(i);
       item.innerHTML = `
-        <span class="led-preview" style="--led-color: rgb(${color.r},${color.g},${color.b})"></span>
-        <div class="led-meta">
+        <div class="led-item-header">
           <span class="led-index">LED ${i}</span>
-          <span class="led-name">${color.label}</span>
+          <span class="led-preview"></span>
         </div>
-        <button class="btn btn-led-on led-toggle" disabled>Tænd</button>
+        <div class="led-picker-row">
+          <input type="color" class="led-color-input" value="${rgbToHex(r, g, b)}" disabled>
+          <span class="led-rgb-text">${r}, ${g}, ${b}</span>
+        </div>
+        <div class="led-rgb-inputs">
+          <label>R <input type="number" class="led-r" min="0" max="255" value="${r}" disabled></label>
+          <label>G <input type="number" class="led-g" min="0" max="255" value="${g}" disabled></label>
+          <label>B <input type="number" class="led-b" min="0" max="255" value="${b}" disabled></label>
+        </div>
+        <div class="led-actions">
+          <button class="btn btn-led-on led-apply" disabled>Send farve</button>
+          <button class="btn btn-outline led-off" disabled>Sluk</button>
+        </div>
       `;
-      item.querySelector(".led-toggle").addEventListener("click", () => {
-        const next = !ledState[i];
-        publishCmd(TOPICS.cmdLed(i), next ? "on" : "off");
-        setLedUi(i, next);
+
+      const colorInput = item.querySelector(".led-color-input");
+      const rgbInputs = item.querySelectorAll(".led-r, .led-g, .led-b");
+
+      colorInput.addEventListener("input", () => {
+        const rgb = hexToRgb(colorInput.value);
+        syncInputsFromColor(item, rgb.r, rgb.g, rgb.b);
       });
+
+      rgbInputs.forEach((input) => {
+        input.addEventListener("input", () => {
+          const rgb = readLedInputs(item);
+          syncInputsFromColor(item, rgb.r, rgb.g, rgb.b);
+        });
+      });
+
+      item.querySelector(".led-apply").addEventListener("click", () => {
+        const { r: lr, g: lg, b: lb } = readLedInputs(item);
+        const payload = `${lr},${lg},${lb}`;
+        publishCmd(TOPICS.cmdLed(i), payload);
+        updateLedPreview(item, lr, lg, lb, lr > 0 || lg > 0 || lb > 0);
+      });
+
+      item.querySelector(".led-off").addEventListener("click", () => {
+        publishCmd(TOPICS.cmdLed(i), "off");
+        syncInputsFromColor(item, 0, 0, 0);
+      });
+
+      updateLedPreview(item, r, g, b, false);
       ledGrid.appendChild(item);
     }
   }
@@ -234,9 +288,9 @@
 
   ledAllOffBtn.addEventListener("click", () => {
     publishCmd(TOPICS.cmdLedAll, "off");
-    for (let i = 0; i < LED_COUNT; i++) {
-      setLedUi(i, false);
-    }
+    ledGrid.querySelectorAll(".led-item").forEach((item) => {
+      syncInputsFromColor(item, 0, 0, 0);
+    });
   });
 
   buzzerBtn.addEventListener("click", () => {
