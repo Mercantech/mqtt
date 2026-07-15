@@ -18,6 +18,10 @@
     cmdBuzzer: "demo/opla/cmd/buzzer",
     cmdLed: (i) => `demo/opla/cmd/led/${i}`,
     cmdLedAll: "demo/opla/cmd/led",
+    labAlarm: "demo/lab/alarm",
+    labRetained: "demo/lab/retained",
+    labQos: "demo/lab/qos",
+    labWill: "demo/lab/will",
   };
 
   const WS_URL = `ws://${location.hostname}:8888`;
@@ -33,6 +37,8 @@
 
   const oplaStatusDot = document.getElementById("oplaStatusDot");
   const oplaStatusText = document.getElementById("oplaStatusText");
+  const oplaStatusDotMini = document.getElementById("oplaStatusDotMini");
+  const oplaStatusTextMini = document.getElementById("oplaStatusTextMini");
   const sensorTemp = document.getElementById("sensorTemp");
   const sensorHumidity = document.getElementById("sensorHumidity");
   const sensorLight = document.getElementById("sensorLight");
@@ -42,7 +48,36 @@
   const ledAllOffBtn = document.getElementById("ledAllOffBtn");
   const buzzerBtn = document.getElementById("buzzerBtn");
 
+  const fanoutPubBtn = document.getElementById("fanoutPubBtn");
+  const fanoutResult = document.getElementById("fanoutResult");
+  const wildcardInbox = document.getElementById("wildcardInbox");
+  const retainPayload = document.getElementById("retainPayload");
+  const retainSaveBtn = document.getElementById("retainSaveBtn");
+  const retainClearBtn = document.getElementById("retainClearBtn");
+  const retainLateBtn = document.getElementById("retainLateBtn");
+  const retainStored = document.getElementById("retainStored");
+  const retainLateValue = document.getElementById("retainLateValue");
+  const retainLateMeta = document.getElementById("retainLateMeta");
+  const qos0Btn = document.getElementById("qos0Btn");
+  const qos1Btn = document.getElementById("qos1Btn");
+  const qos2Btn = document.getElementById("qos2Btn");
+  const lwtSpawnBtn = document.getElementById("lwtSpawnBtn");
+  const lwtKillBtn = document.getElementById("lwtKillBtn");
+  const lwtNiceBtn = document.getElementById("lwtNiceBtn");
+  const lwtDot = document.getElementById("lwtDot");
+  const lwtStatusText = document.getElementById("lwtStatusText");
+  const lwtResult = document.getElementById("lwtResult");
+  const gotoOplaTab = document.getElementById("gotoOplaTab");
+
   let client = null;
+  let lwtClient = null;
+  let currentWildcardFilter = "demo/lab/+/temp";
+  let wildcardHits = 0;
+
+  const labButtons = () =>
+    document.querySelectorAll(
+      "#fanoutPubBtn, [data-wc-pub], #retainSaveBtn, #retainClearBtn, #retainLateBtn, #qos0Btn, #qos1Btn, #qos2Btn, #lwtSpawnBtn"
+    );
 
   function rgbToHex(r, g, b) {
     return "#" + [r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("");
@@ -54,6 +89,7 @@
   }
 
   function log(text, type) {
+    if (!messageLog) return;
     const entry = document.createElement("div");
     entry.className = "log-entry" + (type ? " " + type : "");
     const time = new Date().toLocaleTimeString("da-DK");
@@ -72,6 +108,13 @@
     ledGrid.querySelectorAll("button, input").forEach((el) => {
       el.disabled = !connected;
     });
+    labButtons().forEach((btn) => {
+      btn.disabled = !connected;
+    });
+    if (!connected) {
+      lwtKillBtn.disabled = true;
+      lwtNiceBtn.disabled = true;
+    }
   }
 
   function setOplaOnline(online) {
@@ -79,9 +122,14 @@
     oplaStatusText.textContent = online ? "Online" : "Offline";
     oplaStatusText.classList.toggle("online", online);
     oplaStatusText.classList.toggle("offline", !online);
+    if (oplaStatusDotMini) {
+      oplaStatusDotMini.classList.toggle("connected", online);
+      oplaStatusTextMini.textContent = online ? "Opla online" : "Opla offline";
+    }
   }
 
   function flashSensor(el) {
+    if (!el) return;
     el.classList.remove("updated");
     void el.offsetWidth;
     el.classList.add("updated");
@@ -159,8 +207,7 @@
 
       item.querySelector(".led-apply").addEventListener("click", () => {
         const { r: lr, g: lg, b: lb } = readLedInputs(item);
-        const payload = `${lr},${lg},${lb}`;
-        publishCmd(TOPICS.cmdLed(i), payload);
+        publishCmd(TOPICS.cmdLed(i), `${lr},${lg},${lb}`);
         updateLedPreview(item, lr, lg, lb, lr > 0 || lg > 0 || lb > 0);
       });
 
@@ -173,6 +220,18 @@
       updateLedPreview(item, r, g, b, false);
       ledGrid.appendChild(item);
     }
+  }
+
+  /* —— Topic matching (browser-side for wildcard demo UX) —— */
+  function topicMatches(filter, topic) {
+    const f = filter.split("/");
+    const t = topic.split("/");
+    for (let i = 0; i < f.length; i++) {
+      if (f[i] === "#") return i === f.length - 1;
+      if (i >= t.length) return false;
+      if (f[i] !== "+" && f[i] !== t[i]) return false;
+    }
+    return f.length === t.length;
   }
 
   function handleOplaMessage(topic, payload) {
@@ -202,37 +261,295 @@
         flashSensor(sensorButton.closest(".sensor-card"));
         updateLastSeen();
         break;
+      case TOPICS.labWill:
+        lwtResult.innerHTML =
+          `LWT/status modtaget: <code>${value}</code> på <code>${TOPICS.labWill}</code>`;
+        if (value === "offline") {
+          lwtDot.classList.remove("connected");
+          lwtStatusText.textContent = "Testament udført (offline)";
+        } else if (value === "online") {
+          lwtDot.classList.add("connected");
+          lwtStatusText.textContent = "LWT-klient online";
+        }
+        break;
+      case TOPICS.labRetained:
+        retainStored.textContent = value || "(tom)";
+        break;
+    }
+
+    if (topic.startsWith("demo/lab/") && topicMatches(currentWildcardFilter, topic)) {
+      if (wildcardHits === 0) wildcardInbox.innerHTML = "";
+      wildcardHits += 1;
+      const row = document.createElement("div");
+      row.className = "wildcard-hit";
+      row.innerHTML = `<span class="topic">${topic}</span> → <span class="payload">${value}</span>`;
+      wildcardInbox.prepend(row);
     }
   }
 
-  function subscribeOpla() {
+  function subscribeLabs() {
     if (!client) return;
-    client.subscribe(OPLA_TOPIC, (err) => {
-      if (err) {
-        log("Subscribe fejl: " + err.message, "system");
-      } else {
-        log("Lytter på <span class='topic'>" + OPLA_TOPIC + "</span>", "system");
-      }
+    const topics = [
+      OPLA_TOPIC,
+      "demo/lab/#",
+      TOPICS.labWill,
+      TOPICS.labRetained,
+    ];
+    topics.forEach((t) => {
+      client.subscribe(t, (err) => {
+        if (err) log("Subscribe fejl (" + t + "): " + err.message, "system");
+      });
     });
+    log("Lytter på Opla + demo/lab/# (showcase)", "system");
   }
 
-  function publishCmd(topic, payload) {
+  function publishCmd(topic, payload, opts, done) {
     if (!client || !client.connected) return;
-    client.publish(topic, payload, (err) => {
+    const options = opts || {};
+    client.publish(topic, payload, options, (err) => {
       if (err) {
         log("Publish fejl: " + err.message, "system");
       } else {
         log(
-          "Sendt <span class='payload'>" + payload + "</span> → <span class='topic'>" + topic + "</span>",
+          "Sendt <span class='payload'>" +
+            payload +
+            "</span> → <span class='topic'>" +
+            topic +
+            "</span>" +
+            (options.qos != null ? " (QoS " + options.qos + ")" : "") +
+            (options.retain ? " [retain]" : ""),
           "system"
         );
       }
+      if (done) done(err);
     });
   }
 
+  /* —— Fan-out —— */
+  fanoutPubBtn.addEventListener("click", () => {
+    document.querySelectorAll(".fanout-sub").forEach((el) => el.classList.remove("hit"));
+    fanoutResult.textContent = "Publisher…";
+    publishCmd(TOPICS.labAlarm, "ALARM " + new Date().toLocaleTimeString("da-DK"), { qos: 0 }, () => {
+      // Visuelle "modtagere" — samme besked når deres filter matcher
+      const receivers = [
+        { id: "dashboard", filter: "demo/lab/#" },
+        { id: "phone", filter: "demo/lab/alarm" },
+        { id: "logger", filter: "demo/+/alarm" },
+      ];
+      let count = 0;
+      receivers.forEach((r, i) => {
+        setTimeout(() => {
+          if (topicMatches(r.filter, TOPICS.labAlarm)) {
+            const el = document.querySelector(`[data-sub="${r.id}"]`);
+            if (el) el.classList.add("hit");
+            count += 1;
+          }
+          if (i === receivers.length - 1) {
+            fanoutResult.textContent =
+              `1 PUBLISH → ${count} subscribers modtog (decoupling / fan-out)`;
+          }
+        }, 120 * (i + 1));
+      });
+    });
+  });
+
+  /* —— Wildcards —— */
+  document.querySelectorAll('input[name="wcFilter"]').forEach((input) => {
+    input.addEventListener("change", () => {
+      currentWildcardFilter = input.value;
+      wildcardHits = 0;
+      wildcardInbox.innerHTML =
+        `<div class="wildcard-empty">Filter: <code>${currentWildcardFilter}</code> — publish for at teste</div>`;
+    });
+  });
+
+  document.querySelectorAll("[data-wc-pub]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const topic = btn.getAttribute("data-wc-pub");
+      const payload = "ping";
+      const matches = topicMatches(currentWildcardFilter, topic);
+      publishCmd(topic, payload);
+      if (!matches) {
+        const miss = document.createElement("div");
+        miss.className = "wildcard-miss";
+        miss.innerHTML = `<span class="topic">${topic}</span> matchede ikke filteret`;
+        if (wildcardHits === 0 && wildcardInbox.querySelector(".wildcard-empty")) {
+          wildcardInbox.innerHTML = "";
+        }
+        wildcardInbox.prepend(miss);
+      }
+    });
+  });
+
+  /* —— Retain —— */
+  retainSaveBtn.addEventListener("click", () => {
+    const payload = retainPayload.value || " ";
+    publishCmd(TOPICS.labRetained, payload, { retain: true, qos: 1 }, () => {
+      retainStored.textContent = payload;
+      retainLateValue.textContent = "—";
+      retainLateMeta.textContent = "klar til sen subscriber";
+    });
+  });
+
+  retainClearBtn.addEventListener("click", () => {
+    publishCmd(TOPICS.labRetained, "", { retain: true, qos: 1 }, () => {
+      retainStored.textContent = "(ryddet)";
+      retainLateValue.textContent = "—";
+      retainLateMeta.textContent = "retained clear (tom payload)";
+    });
+  });
+
+  retainLateBtn.addEventListener("click", () => {
+    retainLateMeta.textContent = "Forbinder ny klient…";
+    retainLateValue.textContent = "…";
+    const late = mqtt.connect(WS_URL, {
+      clientId: "late-sub-" + Math.random().toString(16).slice(2, 8),
+      clean: true,
+    });
+    let got = false;
+    late.on("connect", () => {
+      late.subscribe(TOPICS.labRetained);
+    });
+    late.on("message", (topic, payload) => {
+      if (topic !== TOPICS.labRetained) return;
+      got = true;
+      const value = payload.toString();
+      retainLateValue.textContent = value || "(tom)";
+      retainLateMeta.textContent = "Leveret med det samme ved subscribe (retain)";
+      setTimeout(() => late.end(true), 200);
+    });
+    setTimeout(() => {
+      if (!got) {
+        retainLateValue.textContent = "(intet retained)";
+        retainLateMeta.textContent = "Ingen retained besked på topic";
+      }
+      if (late.connected) late.end(true);
+    }, 1500);
+  });
+
+  /* —— QoS —— */
+  function runQos(qos) {
+    const start = performance.now();
+    const payload = `qos-${qos}-${Date.now()}`;
+    const textEl = document.querySelector(`.qos-result[data-qos="${qos}"] .qos-result-text`);
+    textEl.textContent = "sender…";
+    publishCmd(TOPICS.labQos, payload, { qos }, (err) => {
+      const ms = Math.round(performance.now() - start);
+      if (err) {
+        textEl.textContent = "fejl: " + err.message;
+        return;
+      }
+      const label =
+        qos === 0
+          ? `afsendt ~${ms} ms (ingen ack)`
+          : qos === 1
+            ? `PUBACK ~${ms} ms (mindst én gang)`
+            : `handshake færdig ~${ms} ms (præcis én)`;
+      textEl.textContent = label;
+    });
+  }
+
+  qos0Btn.addEventListener("click", () => runQos(0));
+  qos1Btn.addEventListener("click", () => runQos(1));
+  qos2Btn.addEventListener("click", () => runQos(2));
+
+  /* —— LWT —— */
+  function setLwtControls(spawned) {
+    lwtSpawnBtn.disabled = !client || !client.connected || spawned;
+    lwtKillBtn.disabled = !spawned;
+    lwtNiceBtn.disabled = !spawned;
+  }
+
+  lwtSpawnBtn.addEventListener("click", () => {
+    if (lwtClient) {
+      try {
+        lwtClient.end(true);
+      } catch (_) {}
+    }
+    lwtClient = mqtt.connect(WS_URL, {
+      clientId: "lwt-demo-" + Math.random().toString(16).slice(2, 8),
+      clean: true,
+      will: {
+        topic: TOPICS.labWill,
+        payload: "offline",
+        qos: 1,
+        retain: true,
+      },
+    });
+    lwtClient.on("connect", () => {
+      publishVia(lwtClient, TOPICS.labWill, "online", { retain: true, qos: 1 });
+      lwtDot.classList.add("connected");
+      lwtStatusText.textContent = "LWT-klient online";
+      lwtResult.textContent =
+        "Klient kører med will=offline. Kill = abrupt. Pæn DISCONNECT = ingen testament.";
+      setLwtControls(true);
+    });
+  });
+
+  function publishVia(c, topic, payload, opts) {
+    c.publish(topic, payload, opts || {});
+  }
+
+  lwtKillBtn.addEventListener("click", () => {
+    if (!lwtClient) return;
+    lwtResult.textContent = "Forbindelse dræbes — broker bør udgive LWT (offline)…";
+    // Abrupt close uden MQTT DISCONNECT
+    try {
+      if (lwtClient.stream && lwtClient.stream.destroy) {
+        lwtClient.stream.destroy();
+      } else if (lwtClient.conn && lwtClient.conn.close) {
+        lwtClient.conn.close();
+      } else {
+        lwtClient.end(true);
+      }
+    } catch (_) {
+      lwtClient.end(true);
+    }
+    lwtClient = null;
+    setLwtControls(false);
+    lwtSpawnBtn.disabled = !(client && client.connected);
+  });
+
+  lwtNiceBtn.addEventListener("click", () => {
+    if (!lwtClient) return;
+    lwtResult.textContent =
+      "Pæn DISCONNECT — testament udføres IKKE. Status sættes manuelt til offline.";
+    publishVia(lwtClient, TOPICS.labWill, "offline", { retain: true, qos: 1 });
+    lwtClient.end(false);
+    lwtClient = null;
+    lwtDot.classList.remove("connected");
+    lwtStatusText.textContent = "Pænt afkoblet";
+    setLwtControls(false);
+    lwtSpawnBtn.disabled = !(client && client.connected);
+  });
+
+  /* —— Tabs —— */
+  document.querySelectorAll(".lab-tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      const name = tab.dataset.tab;
+      document.querySelectorAll(".lab-tab").forEach((t) => t.classList.toggle("active", t === tab));
+      document.querySelectorAll(".lab-pane").forEach((pane) => {
+        const on = pane.id === "tab-" + name;
+        pane.classList.toggle("active", on);
+        pane.hidden = !on;
+      });
+    });
+  });
+
+  gotoOplaTab.addEventListener("click", () => {
+    document.querySelector('.lab-tab[data-tab="opla"]').click();
+  });
+
+  /* —— Connect —— */
   connectBtn.addEventListener("click", () => {
     if (client && client.connected) {
       client.end();
+      if (lwtClient) {
+        try {
+          lwtClient.end(true);
+        } catch (_) {}
+        lwtClient = null;
+      }
       return;
     }
 
@@ -247,7 +564,9 @@
     client.on("connect", () => {
       setConnected(true);
       log("Forbundet til broker", "system");
-      subscribeOpla();
+      subscribeLabs();
+      setLwtControls(false);
+      lwtSpawnBtn.disabled = false;
     });
 
     client.on("message", (topic, payload) => {
@@ -272,11 +591,8 @@
     const topic = subTopic.value.trim();
     if (!topic || !client) return;
     client.subscribe(topic, (err) => {
-      if (err) {
-        log("Subscribe fejl: " + err.message, "system");
-      } else {
-        log("Subscribed til <span class='topic'>" + topic + "</span>", "system");
-      }
+      if (err) log("Subscribe fejl: " + err.message, "system");
+      else log("Subscribed til <span class='topic'>" + topic + "</span>", "system");
     });
   });
 

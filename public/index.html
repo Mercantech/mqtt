@@ -521,17 +521,180 @@ mqtt.connect(clientId, NULL, NULL,
     <section id="demo">
       <h2><span class="section-num">08</span> Live MQTT Demo</h2>
       <p class="lead">
-        Forbind til brokeren for at se live data fra Arduino Opla og styre
-        RGB-LED’erne direkte fra browseren — præcis samme pub/sub-mekanik som i teorien.
+        Forbind til brokeren og oplev MQTT’s styrker live: fan-out, wildcards,
+        retain, QoS, Last Will — plus Opla-sensorer og LED-styring.
       </p>
 
       <div class="demo-panel">
         <div class="demo-header">
-          <h3><span class="status-dot" id="statusDot"></span> MQTT Klient</h3>
+          <h3><span class="status-dot" id="statusDot"></span> MQTT Lab</h3>
           <button class="btn btn-outline" id="connectBtn">Forbind</button>
         </div>
         <div class="demo-body">
 
+          <div class="lab-tabs" role="tablist">
+            <button type="button" class="lab-tab active" data-tab="showcase" role="tab">MQTT showcase</button>
+            <button type="button" class="lab-tab" data-tab="opla" role="tab">Arduino Opla</button>
+            <button type="button" class="lab-tab" data-tab="raw" role="tab">Rå MQTT</button>
+          </div>
+
+          <!-- Tab: Showcase -->
+          <div class="lab-pane active" id="tab-showcase" role="tabpanel">
+            <p class="lab-intro">
+              Alle demos nedenfor kører mod den rigtige broker. Tryk <strong>Forbind</strong>,
+              og prøv knapperne — det er den samme protokol som Opla bruger.
+            </p>
+
+            <div class="feature-lab">
+
+              <!-- Fan-out -->
+              <article class="feature-card" id="feat-fanout">
+                <div class="feature-card-head">
+                  <span class="feature-tag">01</span>
+                  <div>
+                    <h4>One publish → many subscribers</h4>
+                    <p>Afsender kender ikke modtagerne. Ét PUBLISH lander hos alle, der matcher.</p>
+                  </div>
+                </div>
+                <div class="fanout-visual">
+                  <div class="fanout-pub">
+                    <button type="button" class="btn" id="fanoutPubBtn" disabled>Publish “alarm”</button>
+                    <code>demo/lab/alarm</code>
+                  </div>
+                  <div class="fanout-arrow">⇣ fan-out</div>
+                  <div class="fanout-subs" id="fanoutSubs">
+                    <div class="fanout-sub" data-sub="dashboard">Dashboard<br><small>demo/lab/#</small></div>
+                    <div class="fanout-sub" data-sub="phone">Mobil-app<br><small>demo/lab/alarm</small></div>
+                    <div class="fanout-sub" data-sub="logger">Logger<br><small>demo/+/alarm</small></div>
+                  </div>
+                </div>
+                <p class="feature-result" id="fanoutResult">Afventer publish…</p>
+              </article>
+
+              <!-- Wildcards -->
+              <article class="feature-card" id="feat-wildcards">
+                <div class="feature-card-head">
+                  <span class="feature-tag">02</span>
+                  <div>
+                    <h4>Wildcards live</h4>
+                    <p>Vælg et filter, publish til flere topics — se hvad der slipper igennem.</p>
+                  </div>
+                </div>
+                <div class="wildcard-controls">
+                  <label class="chip"><input type="radio" name="wcFilter" value="demo/lab/+/temp" checked> <code>+ </code> ét niveau</label>
+                  <label class="chip"><input type="radio" name="wcFilter" value="demo/lab/#"> <code>#</code> alle under</label>
+                  <label class="chip"><input type="radio" name="wcFilter" value="demo/lab/a/temp"> eksakt</label>
+                </div>
+                <div class="wildcard-actions">
+                  <button type="button" class="btn btn-outline" data-wc-pub="demo/lab/a/temp" disabled>a/temp</button>
+                  <button type="button" class="btn btn-outline" data-wc-pub="demo/lab/b/temp" disabled>b/temp</button>
+                  <button type="button" class="btn btn-outline" data-wc-pub="demo/lab/a/humidity" disabled>a/humidity</button>
+                  <button type="button" class="btn btn-outline" data-wc-pub="demo/lab/x/y/z" disabled>x/y/z</button>
+                </div>
+                <div class="wildcard-inbox" id="wildcardInbox">
+                  <div class="wildcard-empty">Ingen hits endnu — vælg filter og publish</div>
+                </div>
+              </article>
+
+              <!-- Retain -->
+              <article class="feature-card" id="feat-retain">
+                <div class="feature-card-head">
+                  <span class="feature-tag">03</span>
+                  <div>
+                    <h4>Retained messages</h4>
+                    <p>Brokeren husker sidste besked. Nye subscribers får den med det samme.</p>
+                  </div>
+                </div>
+                <div class="retain-row">
+                  <input type="text" id="retainPayload" value="setpoint=22.5" maxlength="40">
+                  <button type="button" class="btn" id="retainSaveBtn" disabled>Gem retained</button>
+                  <button type="button" class="btn btn-outline" id="retainClearBtn" disabled>Ryd retained</button>
+                </div>
+                <div class="retain-demo">
+                  <div class="retain-box">
+                    <span class="retain-label">Broker gemmer</span>
+                    <code id="retainStored">—</code>
+                    <small>topic: demo/lab/retained</small>
+                  </div>
+                  <button type="button" class="btn btn-outline" id="retainLateBtn" disabled>Simuler sen subscriber →</button>
+                  <div class="retain-box highlight">
+                    <span class="retain-label">Modtaget ved connect</span>
+                    <code id="retainLateValue">—</code>
+                    <small id="retainLateMeta">tryk knappen</small>
+                  </div>
+                </div>
+              </article>
+
+              <!-- QoS -->
+              <article class="feature-card" id="feat-qos">
+                <div class="feature-card-head">
+                  <span class="feature-tag">04</span>
+                  <div>
+                    <h4>QoS 0 · 1 · 2</h4>
+                    <p>Samme payload, tre leveringsgarantier. Se bekræftelse og tid.</p>
+                  </div>
+                </div>
+                <div class="qos-actions">
+                  <button type="button" class="btn qos-btn qos-0-btn" id="qos0Btn" disabled>Send QoS 0</button>
+                  <button type="button" class="btn qos-btn qos-1-btn" id="qos1Btn" disabled>Send QoS 1</button>
+                  <button type="button" class="btn qos-btn qos-2-btn" id="qos2Btn" disabled>Send QoS 2</button>
+                </div>
+                <div class="qos-results" id="qosResults">
+                  <div class="qos-result" data-qos="0"><span class="qos-badge qos-0">0</span> <span class="qos-result-text">—</span></div>
+                  <div class="qos-result" data-qos="1"><span class="qos-badge qos-1">1</span> <span class="qos-result-text">—</span></div>
+                  <div class="qos-result" data-qos="2"><span class="qos-badge qos-2">2</span> <span class="qos-result-text">—</span></div>
+                </div>
+              </article>
+
+              <!-- LWT -->
+              <article class="feature-card" id="feat-lwt">
+                <div class="feature-card-head">
+                  <span class="feature-tag">05</span>
+                  <div>
+                    <h4>Last Will &amp; Testament</h4>
+                    <p>Klienten “dør” uden DISCONNECT — brokeren udgiver testamentet automatisk.</p>
+                  </div>
+                </div>
+                <div class="lwt-row">
+                  <div class="lwt-status-box">
+                    <span class="status-dot" id="lwtDot"></span>
+                    <span id="lwtStatusText">Ingen LWT-klient</span>
+                  </div>
+                  <button type="button" class="btn" id="lwtSpawnBtn" disabled>Start klient m. LWT</button>
+                  <button type="button" class="btn btn-outline" id="lwtKillBtn" disabled>Kill forbindelse</button>
+                  <button type="button" class="btn btn-outline" id="lwtNiceBtn" disabled>Pæn DISCONNECT</button>
+                </div>
+                <p class="feature-result" id="lwtResult">
+                  Opla bruger allerede LWT på <code>demo/opla/status</code> —
+                  prøv også denne browser-demo på <code>demo/lab/will</code>.
+                </p>
+              </article>
+
+              <!-- Bidirectional highlight -->
+              <article class="feature-card feature-card-wide" id="feat-bi">
+                <div class="feature-card-head">
+                  <span class="feature-tag">06</span>
+                  <div>
+                    <h4>Bidirektionelt på samme socket</h4>
+                    <p>
+                      Telemetri ind, kommandoer ud — én TCP/WebSocket-forbindelse.
+                      Skift til fanen <strong>Arduino Opla</strong> og send RGB / buzzer.
+                      Status her spejler Opla’s retained LWT:
+                    </p>
+                  </div>
+                </div>
+                <div class="bi-strip">
+                  <div class="bi-pill"><span class="status-dot" id="oplaStatusDotMini"></span> <span id="oplaStatusTextMini">Opla ukendt</span></div>
+                  <div class="bi-pill">↑ sensors · ↓ cmd/led · ↓ cmd/buzzer</div>
+                  <button type="button" class="btn btn-outline" id="gotoOplaTab">Åbn Opla-styring</button>
+                </div>
+              </article>
+
+            </div>
+          </div>
+
+          <!-- Tab: Opla -->
+          <div class="lab-pane" id="tab-opla" role="tabpanel" hidden>
           <div class="opla-dashboard">
             <div class="opla-dashboard-header">
               <div class="opla-title">
@@ -585,22 +748,23 @@ mqtt.connect(clientId, NULL, NULL,
 
             <div class="last-update" id="lastUpdate">Ingen data modtaget endnu</div>
           </div>
+          </div>
 
-          <details class="demo-advanced">
-            <summary>Avanceret — rå MQTT</summary>
-            <div class="demo-row">
-              <input type="text" id="subTopic" placeholder="Subscribe topic" value="demo/opla/#">
-              <button class="btn" id="subBtn" disabled>Subscribe</button>
-            </div>
-            <div class="demo-row">
-              <input type="text" id="pubTopic" placeholder="Publish topic" value="demo/hej">
-              <input type="text" id="pubPayload" placeholder="Payload" value="Hej MQTT!">
-              <button class="btn" id="pubBtn" disabled>Publish</button>
-            </div>
-            <div class="message-log" id="messageLog">
-              <div class="log-entry system">Klar — tryk "Forbind" for at starte</div>
-            </div>
-          </details>
+          <!-- Tab: Raw -->
+          <div class="lab-pane" id="tab-raw" role="tabpanel" hidden>
+          <div class="demo-row">
+            <input type="text" id="subTopic" placeholder="Subscribe topic" value="demo/opla/#">
+            <button class="btn" id="subBtn" disabled>Subscribe</button>
+          </div>
+          <div class="demo-row">
+            <input type="text" id="pubTopic" placeholder="Publish topic" value="demo/hej">
+            <input type="text" id="pubPayload" placeholder="Payload" value="Hej MQTT!">
+            <button class="btn" id="pubBtn" disabled>Publish</button>
+          </div>
+          <div class="message-log" id="messageLog">
+            <div class="log-entry system">Klar — tryk "Forbind" for at starte</div>
+          </div>
+          </div>
         </div>
       </div>
 
