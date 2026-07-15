@@ -28,6 +28,7 @@
       <a href="#demo">Demo</a>
       <a href="#arduino">Arduino</a>
       <a href="#csharp">C#</a>
+      <button type="button" class="btn btn-present" id="presentBtn" title="Start præsentation (P)">Presentér</button>
     </nav>
   </header>
 
@@ -703,7 +704,27 @@ Console.ReadLine();</code></pre>
     · OASIS MQTT standard
   </footer>
 
+  <!-- Present mode chrome -->
+  <div id="presentChrome" class="present-chrome" hidden>
+    <div class="present-chrome-left">
+      <span class="present-brand">MQTT Pensum</span>
+      <span class="present-hint">← → · Space · Esc</span>
+    </div>
+    <div class="present-chrome-center">
+      <button type="button" class="present-nav-btn" id="presentPrev" aria-label="Forrige slide">‹</button>
+      <span class="present-counter" id="presentCounter">1 / 1</span>
+      <button type="button" class="present-nav-btn" id="presentNext" aria-label="Næste slide">›</button>
+    </div>
+    <div class="present-chrome-right">
+      <button type="button" class="btn btn-outline present-exit" id="presentExit">Afslut</button>
+    </div>
+  </div>
+  <div class="present-progress" id="presentProgress" hidden>
+    <div class="present-progress-bar" id="presentProgressBar"></div>
+  </div>
+
   <script src="https://unpkg.com/mqtt@5.10.4/dist/mqtt.min.js"></script>
   <script src="/js/mqtt-demo.js"></script>
+  <script src="/js/present.js"></script>
 </body>
 </html>

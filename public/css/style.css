@@ -1148,3 +1148,230 @@ footer a {
     transform: rotate(90deg);
   }
 }
+
+/* —— Present mode —— */
+.btn-present {
+  margin-left: 0.35rem;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: var(--bg-deep);
+  border: none;
+  border-radius: 999px;
+  padding: 0.4rem 0.9rem;
+  font-weight: 700;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.btn-present:hover {
+  opacity: 0.92;
+}
+
+.present-chrome {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  background: rgba(6, 10, 18, 0.92);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid var(--border);
+}
+
+.present-chrome[hidden],
+.present-progress[hidden] {
+  display: none !important;
+}
+
+.present-chrome-left,
+.present-chrome-right,
+.present-chrome-center {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.present-brand {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.present-hint {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.present-counter {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--accent);
+  min-width: 4.5rem;
+  text-align: center;
+}
+
+.present-nav-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.present-nav-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.present-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.present-exit {
+  padding: 0.45rem 0.9rem;
+}
+
+.present-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 201;
+  background: rgba(28, 53, 88, 0.5);
+}
+
+.present-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transition: width 0.25s ease;
+}
+
+body.present-mode {
+  overflow: hidden;
+}
+
+body.present-mode > header,
+body.present-mode > footer,
+body.present-mode .toc {
+  display: none !important;
+}
+
+body.present-mode > main {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+body.present-mode .hero.present-slide,
+body.present-mode main > section.present-slide {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  margin: 0;
+  padding: 2.5rem 4vw 5.5rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background:
+    radial-gradient(ellipse 70% 45% at 15% 0%, rgba(0, 230, 184, 0.1), transparent 50%),
+    radial-gradient(ellipse 50% 40% at 90% 20%, rgba(91, 140, 255, 0.08), transparent 45%),
+    var(--bg-deep);
+  scroll-margin: 0;
+}
+
+body.present-mode .hero.present-active,
+body.present-mode main > section.present-active {
+  display: block;
+  animation: presentFade 0.28s ease;
+}
+
+@keyframes presentFade {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+body.present-mode .hero.present-active {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+body.present-mode .hero.present-active .hero-grid {
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+body.present-mode .present-active {
+  font-size: 1.05rem;
+}
+
+body.present-mode .present-active h1 {
+  font-size: clamp(2.4rem, 5vw, 3.6rem);
+}
+
+body.present-mode .present-active h2 {
+  font-size: clamp(1.8rem, 3.5vw, 2.4rem);
+  margin-bottom: 1.25rem;
+}
+
+body.present-mode .present-active h3 {
+  font-size: 1.3rem;
+}
+
+body.present-mode .present-active .lead,
+body.present-mode .present-active .hero-lead {
+  font-size: 1.2rem;
+  max-width: 52rem;
+}
+
+body.present-mode .present-active > *:not(.demo-panel) {
+  max-width: 1100px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+body.present-mode .present-active .demo-panel,
+body.present-mode .present-active .card-grid,
+body.present-mode .present-active .compare-grid,
+body.present-mode .present-active .diagram,
+body.present-mode .present-active table,
+body.present-mode .present-active .topic-tree,
+body.present-mode .present-active .callout,
+body.present-mode .present-active .timeline,
+body.present-mode .present-active .qos-flow,
+body.present-mode .present-active pre {
+  max-width: 1100px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+body.present-mode #demo.present-active {
+  padding-top: 1.5rem;
+}
+
+body.present-mode #demo.present-active .demo-panel {
+  max-width: 1200px;
+}
+
+@media (max-width: 640px) {
+  .present-hint {
+    display: none;
+  }
+
+  body.present-mode .hero.present-slide,
+  body.present-mode main > section.present-slide {
+    padding: 1.5rem 1rem 5.5rem;
+  }
+}
