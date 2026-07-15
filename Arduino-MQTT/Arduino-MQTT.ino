@@ -37,7 +37,8 @@ const uint8_t LED_COLORS[5][3] = {
 const unsigned long PUBLISH_INTERVAL_MS = 5000;
 const unsigned long WIFI_RETRY_MS       = 5000;
 const unsigned long MQTT_RETRY_MS       = 5000;
-const unsigned long DISPLAY_REFRESH_MS  = 1000;
+const unsigned long DISPLAY_REFRESH_MS  = 5000;
+const unsigned long DISPLAY_ANIM_MS     = 400;
 const unsigned long ACTIVITY_SHOW_MS    = 3500;
 
 // Layout til rund 240×240 skærm — hold indhold i sikker zone
@@ -69,8 +70,10 @@ unsigned long lastPublish      = 0;
 unsigned long lastWifiRetry    = 0;
 unsigned long lastMqttRetry    = 0;
 unsigned long lastDisplayDraw  = 0;
+unsigned long lastDisplayAnim  = 0;
 unsigned long activityUntil    = 0;
 unsigned long splashFrame      = 0;
+bool displayDirty              = true;
 
 struct UiState {
   float temp     = 0;
@@ -89,13 +92,19 @@ void setLed(int index, uint8_t r, uint8_t g, uint8_t b);
 void setLedFromCommand(int index, const char* cmd);
 void publishButton(int id);
 void displayRedraw();
+void displayRedrawIfDue(bool force = false);
+void displayRequestUpdate();
 void displayShowPhase(const char* phase);
+
+void displayRequestUpdate() {
+  displayDirty = true;
+}
 
 void displayActivity(const char* msg) {
   strncpy(ui.activity, msg, sizeof(ui.activity) - 1);
   ui.activity[sizeof(ui.activity) - 1] = '\0';
   activityUntil = millis() + ACTIVITY_SHOW_MS;
-  displayRedraw();
+  displayRequestUpdate();
 }
 
 void drawStatusDot(int x, int y, bool on, uint16_t color) {
@@ -242,27 +251,40 @@ void displayRedraw() {
   drawActivityLine();
 
   lastDisplayDraw = millis();
+  displayDirty = false;
+}
+
+void displayRedrawIfDue(bool force) {
+  if (!force && !displayDirty) return;
+  if (!force && (millis() - lastDisplayDraw < DISPLAY_REFRESH_MS)) return;
+  displayRedraw();
 }
 
 void displayTick() {
+  ui.wifiOk = WiFi.status() == WL_CONNECTED;
+  ui.mqttOk = mqtt.connected();
+
+  if (activityUntil != 0 && millis() >= activityUntil) {
+    activityUntil = 0;
+    displayRequestUpdate();
+  }
+
   if (ui.phase[0] != '\0' && (!ui.wifiOk || !ui.mqttOk)) {
-    displayAnimateConnecting();
+    if (millis() - lastDisplayAnim >= DISPLAY_ANIM_MS) {
+      lastDisplayAnim = millis();
+      displayAnimateConnecting();
+    }
     return;
   }
 
   if (ui.phase[0] != '\0' && ui.wifiOk && ui.mqttOk) {
     ui.phase[0] = '\0';
     displayActivity("Online!");
+    displayRedrawIfDue(true);
     return;
   }
 
-  if (millis() - lastDisplayDraw > DISPLAY_REFRESH_MS) {
-    bool needRedraw = millis() >= activityUntil && activityUntil != 0;
-    if (needRedraw) {
-      activityUntil = 0;
-      displayRedraw();
-    }
-  }
+  displayRedrawIfDue();
 }
 
 void setLedQuiet(int index, uint8_t r, uint8_t g, uint8_t b) {
@@ -276,7 +298,7 @@ void setLedQuiet(int index, uint8_t r, uint8_t g, uint8_t b) {
 void setLed(int index, uint8_t r, uint8_t g, uint8_t b) {
   setLedQuiet(index, r, g, b);
   carrier.leds.show();
-  displayRedraw();
+  displayRequestUpdate();
 }
 
 void setLedFromCommand(int index, const char* cmd) {
@@ -352,6 +374,7 @@ void connectMQTT() {
     mqtt.publish(TOPIC_STATUS, "online", true);
     ui.phase[0] = '\0';
     displayActivity("MQTT OK");
+    displayRedrawIfDue(true);
   } else {
     Serial.print(F("MQTT: fejl rc="));
     Serial.println(mqtt.state());
