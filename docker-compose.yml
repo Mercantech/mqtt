@@ -1,13 +1,39 @@
+# Dokploy-deploy: docker compose -f ./docker-compose.yml up -d --build
+#
+# Hybrid:
+#   - Host-porte åbne til direkte adgang (lokal / Arduino / tunnel)
+#   - Traefik på port 80 for HTTP-hjemmesiden via labels
+#
+# Routing (samme mønster som øvrige Mercantec-apps):
+#   1. Cloudflare: *.mercantec.tech (wildcard CNAME → tunnel)
+#   2. Tunnel ingress: *.mercantec.tech → http://localhost:80
+#   3. Traefik (Dokploy): Host(`mqtt.mercantec.tech`) → mqtt-pensum:3000
+#
+# MQTT TCP/WebSocket går stadig direkte via host-porte (ikke via Traefik).
 services:
   mqtt-pensum:
     build: .
     container_name: mqtt-pensum
+    restart: unless-stopped
     ports:
-      - "3001:3001"   # Pensum (HTTP)
-      - "1883:1883"   # MQTT (TCP)
-      - "8888:8888"   # MQTT (WebSocket)
+      - "3001:3000"   # Pensum (HTTP) — host
+      - "1883:1883"   # MQTT (TCP) — host (Arduino m.fl.)
+      - "8888:8888"   # MQTT (WebSocket) — host (browser-demo)
     environment:
-      HTTP_PORT: 3001
+      HTTP_PORT: 3000
       MQTT_PORT: 1883
       WS_PORT: 8888
-    restart: unless-stopped
+    networks:
+      - default
+      - dokploy-network
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=dokploy-network
+      - traefik.http.routers.mqtt-pensum.rule=Host(`${APP_DOMAIN:-mqtt.mercantec.tech}`)
+      - traefik.http.routers.mqtt-pensum.entrypoints=web
+      - traefik.http.routers.mqtt-pensum.service=mqtt-pensum
+      - traefik.http.services.mqtt-pensum.loadbalancer.server.port=3000
+
+networks:
+  dokploy-network:
+    external: true
