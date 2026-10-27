@@ -10,6 +10,7 @@
 #   3. Traefik (Dokploy): Host(`mqtt.mercantec.tech`) → mqtt-pensum:3000
 #
 # MQTT TCP/WebSocket går stadig direkte via host-porte (ikke via Traefik).
+# Browser-demo bruger dog wss://host/mqtt via HTTP/Traefik (samme origin).
 services:
   mqtt-pensum:
     build: .
@@ -18,14 +19,14 @@ services:
     ports:
       - "3001:3000"   # Pensum (HTTP) — host
       - "1883:1883"   # MQTT (TCP) — host (Arduino m.fl.)
-      - "8888:8888"   # MQTT (WebSocket) — host (browser-demo)
+      - "8888:8888"   # MQTT (WebSocket) — host (valgfri direkte)
     environment:
       HTTP_PORT: 3000
       MQTT_PORT: 1883
       WS_PORT: 8888
     networks:
-      - default
-      - dokploy-network
+      default:
+        aliases: ["mqtt-pensum"]
     labels:
       - traefik.enable=true
       - traefik.docker.network=dokploy-network
@@ -35,5 +36,6 @@ services:
       - traefik.http.services.mqtt-pensum.loadbalancer.server.port=3000
 
 networks:
-  dokploy-network:
+  default:
+    name: dokploy-network
     external: true
