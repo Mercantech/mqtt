@@ -298,8 +298,8 @@
         <li><code>8080/8083</code> m.fl. — MQTT over WebSocket (det browsere bruger)</li>
       </ul>
       <p>
-        Denne pensumservers browser-demo bruger WebSocket på port
-        <code>8888</code>. Arduino Opla bruger klassisk TCP på <code>1883</code>.
+        Denne pensumservers browser-demo bruger WebSocket på stien
+        <code>/mqtt</code> (<code>wss://</code> via HTTPS). Arduino Opla bruger klassisk TCP på <code>1883</code>.
       </p>
     </section>
 
@@ -897,7 +897,7 @@ mqtt.connect(clientId, NULL, NULL,
 
       <p style="font-size:0.8125rem;color:var(--text-muted)">
         Broker: TCP <code>mqtt://138.199.155.78:1883</code> ·
-        WebSocket <code>ws://138.199.155.78:8888</code>
+        WebSocket <code>wss://&lt;host&gt;/mqtt</code> (browser) · valgfrit direkte <code>ws://…:8888</code>
         (lokal: <code>localhost</code>)
       </p>
     </section>
@@ -1016,6 +1016,7 @@ Console.ReadLine();</code></pre>
 
   <script src="https://unpkg.com/mqtt@5.10.4/dist/mqtt.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-c.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-cpp.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-csharp.min.js"></script>
   <script src="/js/mqtt-demo.js"></script>

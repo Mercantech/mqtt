@@ -24,7 +24,12 @@
     labWill: "demo/lab/will",
   };
 
-  const WS_URL = `ws://${location.hostname}:8888`;
+  // HTTPS-sider SKAL bruge wss (Mixed Content blokerer ws://).
+  // Vi kører MQTT-WS på samme origin: /mqtt (proxied via Traefik/Cloudflare).
+  const WS_URL =
+    (location.protocol === "https:" ? "wss://" : "ws://") +
+    location.host +
+    "/mqtt";
 
   const connectBtn = document.getElementById("connectBtn");
   const subBtn = document.getElementById("subBtn");

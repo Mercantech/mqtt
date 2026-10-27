@@ -38,7 +38,8 @@ npm start
 |-----------------|--------------------------|---------------------------------|
 | Pensum (HTTP)   | `http://localhost:3000`  | Webside med teori og live demo  |
 | MQTT (TCP)      | `mqtt://localhost:1883`  | Arduino Opla, C#, andre klienter|
-| MQTT (WebSocket)| `ws://localhost:8888`    | Browser-demo på pensumsiden     |
+| MQTT (WebSocket)| `ws://localhost:3000/mqtt` / `wss://host/mqtt` | Browser-demo (samme origin som siden) |
+| MQTT (WS direkte)| `ws://localhost:8888`   | Valgfri direkte port (lokal HTTP) |
 
 ## Arduino Opla (MKR WiFi 1010)
 

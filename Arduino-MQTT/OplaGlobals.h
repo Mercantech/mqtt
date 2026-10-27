@@ -7,7 +7,19 @@
 
 #include "secrets.h"
 
-// MQTT topics used by this sketch + the pensum web demo.
+/*
+ * MQTT topic-træ (matcher pensumsidens live demo).
+ *
+ * Publish (Opla → broker → web/C#):
+ *   demo/opla/status    — "online"/"offline" (retained + LWT)
+ *   demo/opla/temp      — temperatur som tekst, fx "23.5"
+ *   demo/opla/humidity  — fugtighed
+ *   demo/opla/light     — lux / light-værdi
+ *   demo/opla/button    — fx "btn-2" ved tryk
+ *
+ * Subscribe (web → broker → Opla):
+ *   demo/opla/cmd/#     — wildcard: alt under cmd/ (led, buzzer, …)
+ */
 static const char TOPIC_STATUS[]   = "demo/opla/status";
 static const char TOPIC_TEMP[]     = "demo/opla/temp";
 static const char TOPIC_HUMIDITY[] = "demo/opla/humidity";

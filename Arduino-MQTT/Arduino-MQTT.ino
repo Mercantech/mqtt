@@ -29,9 +29,10 @@ void setup() {
   carrier.display.setRotation(2);
   displaySplash();
 
-  mqtt.setServer(MQTT_SERVER, MQTT_PORT);
-  mqtt.setCallback(mqttCallback);
-  mqtt.setBufferSize(256);
+  // MQTT-klient setup (selve connect sker i loop når WiFi er klar).
+  mqtt.setServer(MQTT_SERVER, MQTT_PORT);  // broker fra secrets.h
+  mqtt.setCallback(mqttCallback);          // håndter indkommende cmd-topics
+  mqtt.setBufferSize(256);                 // plads til topic + payload
 
   connectWiFi();
 }
@@ -39,19 +40,22 @@ void setup() {
 void loop() {
   displayTick();
 
+  // Tilstands-maskine: WiFi → MQTT → arbejde
   if (WiFi.status() != WL_CONNECTED) {
     connectWiFi();
   } else if (!mqtt.connected()) {
     connectMQTT();
   } else {
+    // SKAL kaldes ofte: holder keep-alive i live og triggere mqttCallback.
     mqtt.loop();
 
+    // Periodisk publish af sensorer (QoS 0 via PubSubClient default).
     if (millis() - lastPublish >= PUBLISH_INTERVAL_MS) {
       lastPublish = millis();
       publishSensorData();
     }
 
-    checkButtons();
+    checkButtons();  // knaptryk → publish på demo/opla/button
   }
 }
 

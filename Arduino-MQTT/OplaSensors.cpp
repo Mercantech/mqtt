@@ -7,6 +7,7 @@
 #include "OplaGlobals.h"
 #include "OplaDisplay.h"
 
+// Event-publish: knaptryk → topic demo/opla/button (fx "btn-3").
 static void publishButton(int id) {
   char payload[8];
   snprintf(payload, sizeof(payload), "btn-%d", id);
@@ -19,6 +20,10 @@ static void publishButton(int id) {
   displayActivity(msg);
 }
 
+/*
+ * Læs sensorer og publicér til egne topics.
+ * MQTT payload er bare tekst (UTF-8/ASCII) — web-demoen parser den som string/number.
+ */
 void publishSensorData() {
   float temp = carrier.Env.readTemperature();
   float humidity = carrier.Env.readHumidity();
@@ -29,11 +34,14 @@ void publishSensorData() {
   }
   carrier.Light.readColor(r, g, b, light);
 
+  // Opdater UI-state (display tegner fra ui.*)
   ui.temp = temp;
   ui.humidity = humidity;
   ui.light = light;
 
   char buf[16];
+
+  // Tre separate topics = subscribers kan vælge præcis hvad de vil have.
   snprintf(buf, sizeof(buf), "%.1f", temp);
   mqtt.publish(TOPIC_TEMP, buf);
 
