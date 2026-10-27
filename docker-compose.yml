@@ -1,41 +1,27 @@
-# Dokploy-deploy: docker compose -f ./docker-compose.yml up -d --build
+# Dokploy-deploy (remote Hetzner): docker compose up -d --build
 #
-# Hybrid:
-#   - Host-porte åbne til direkte adgang (lokal / Arduino / tunnel)
-#   - Traefik på port 80 for HTTP-hjemmesiden via labels
+# Denne server har offentlig IP + host-porte (ingen lokal Traefik/dokploy-network).
+# Browser-demo: http://<host>:3001  → MQTT-WS på samme origin /mqtt
+# Arduino: mqtt://<host>:1883
 #
-# Routing (samme mønster som øvrige Mercantec-apps):
-#   1. Cloudflare: *.mercantec.tech (wildcard CNAME → tunnel)
-#   2. Tunnel ingress: *.mercantec.tech → http://localhost:80
-#   3. Traefik (Dokploy): Host(`mqtt.mercantec.tech`) → mqtt-pensum:3000
-#
-# MQTT TCP/WebSocket går stadig direkte via host-porte (ikke via Traefik).
-# Browser-demo bruger dog wss://host/mqtt via HTTP/Traefik (samme origin).
+# Valgfrie Traefik-labels er bevaret; de virker kun hvis containeren senere
+# kommer på et netværk med Traefik (fx dokploy-network på en host med Traefik).
 services:
   mqtt-pensum:
     build: .
     container_name: mqtt-pensum
     restart: unless-stopped
     ports:
-      - "3001:3000"   # Pensum (HTTP) — host
-      - "1883:1883"   # MQTT (TCP) — host (Arduino m.fl.)
-      - "8888:8888"   # MQTT (WebSocket) — host (valgfri direkte)
+      - "3001:3000"   # Pensum (HTTP)
+      - "1883:1883"   # MQTT (TCP)
+      - "8888:8888"   # MQTT (WebSocket direkte, valgfri)
     environment:
       HTTP_PORT: 3000
       MQTT_PORT: 1883
       WS_PORT: 8888
-    networks:
-      default:
-        aliases: ["mqtt-pensum"]
     labels:
       - traefik.enable=true
-      - traefik.docker.network=dokploy-network
       - traefik.http.routers.mqtt-pensum.rule=Host(`${APP_DOMAIN:-mqtt.mercantec.tech}`)
       - traefik.http.routers.mqtt-pensum.entrypoints=web
       - traefik.http.routers.mqtt-pensum.service=mqtt-pensum
       - traefik.http.services.mqtt-pensum.loadbalancer.server.port=3000
-
-networks:
-  default:
-    name: dokploy-network
-    external: true
